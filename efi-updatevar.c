@@ -20,7 +20,6 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 
-#define __STDC_VERSION__ 199901L
 #include <efi.h>
 
 #include <kernel_efivars.h>

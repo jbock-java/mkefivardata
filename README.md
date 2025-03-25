@@ -1,3 +1,36 @@
+# Motivation for this repo
+
+* [efitools was removed from Fedora 41](https://discussion.fedoraproject.org/t/f41-secure-boot-with-only-your-own-keys/138120) due to build problems.
+* [efitools upstream](https://web.git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git/) looks unmaintained, last tag is `1.9.2`.
+* There's this [arch package](https://gitlab.archlinux.org/archlinux/packaging/packages/efitools), building tag `1.9.2` it's not a source repo though.
+* There should be a functioning source repo for efitools.
+
+This repo was created at upstream tag `1.9.2`.
+
+# `TODO`
+
+* github workflow
+
+# Prerequisites
+
+```
+sudo dnf group install c-development
+sudo dnf install efivar-devel gnu-efi-devel sbsigntools perl-File-Slurp openssl-devel openssl-devel-engine help2man
+```
+
+# Building the binaries
+
+```
+make
+rm -rf build && mkdir build
+make DESTDIR=build install
+```
+
+This should create some binaries like `build/usr/bin/efi-updatevar`.
+
+# Old `README`:
+
+```
 How to use these files
 
 simply typing make will build you everything including sample certificates for
@@ -88,4 +121,4 @@ UpdateVars KEK KEK.auth
 UpdateVars PK PK.auth
 
 And you should now be running in secure mode with your own keys.
-
+```

@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include <time.h>
 
-#define __STDC_VERSION__ 199901L
 #include <efi.h>
 
 #include <kernel_efivars.h>
@@ -37,7 +36,7 @@ kernel_variable_init(void)
 
 	if (kernel_efi_path)
 		return;
-	mktemp(fname);
+	mkdtemp(fname);
 	snprintf(cmdline, sizeof(cmdline), "mount -l > %s", fname);
 	ret = system(cmdline);
 	if (WEXITSTATUS(ret) != 0)
