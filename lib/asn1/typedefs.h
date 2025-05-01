@@ -1,6 +1,7 @@
 #ifdef BUILD_EFI
 #include <efi.h>
 #include <efilib.h>
+#include <stdbool.h>
 
 #define malloc(x) AllocatePool(x)
 #define free FreePool
@@ -52,7 +53,6 @@ typedef unsigned char u_char;
 
 #endif
 
-typedef unsigned char bool;
 typedef unsigned int u_int;
 
 #define DBG1(s...)

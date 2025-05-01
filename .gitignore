@@ -15,6 +15,7 @@ DB.h
 hashlist.h
 *.hash
 *~
+*.swp
 *.orig
 *.pvk
 *.p12

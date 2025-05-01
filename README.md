@@ -15,7 +15,7 @@ This repo was created at upstream tag `1.9.2`.
 
 ```
 sudo dnf group install c-development
-sudo dnf install efivar-devel gnu-efi-devel sbsigntools perl-File-Slurp openssl-devel openssl-devel-engine help2man
+sudo dnf install efivar-devel gnu-efi-devel sbsigntools perl-File-Slurp openssl openssl-devel openssl-devel-engine help2man
 ```
 
 # Building the binaries
