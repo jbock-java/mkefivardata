@@ -94,7 +94,7 @@ error:
 }
 
 EFI_STATUS
-execute(EFI_HANDLE image, CHAR16 *name)
+execute(EFI_HANDLE image, const CHAR16 *name)
 {
 	EFI_STATUS status;
 	EFI_HANDLE h;

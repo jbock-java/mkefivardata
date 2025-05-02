@@ -6,7 +6,6 @@
 
 
 #include <stdint.h>
-#define _XOPEN_SOURCE
 #include <efi.h>
 #ifdef CONFIG_arm
 /* FIXME:
