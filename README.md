@@ -17,7 +17,7 @@ sudo dnf install efivar-devel gnu-efi-devel sbsigntools perl-File-Slurp openssl 
 
 ```sh
 make clean
-make efi-updatevar
+make
 ```
 
 ### create ctags
@@ -32,10 +32,9 @@ ctags -R --exclude .git
 ################
 ```
 
-```
-How to use these files
+### How to use these files
 
-simply typing make will build you everything including sample certificates for
+simply typing `make all` will build you everything including sample certificates for
 PK, KEK and db.
 
 The prerequisites are the standard development environment, gnu-efi version
@@ -60,14 +59,13 @@ All of the EFI programs are also generated in signed form (signed by both db
 and KEK).
 
 
-Loader.efi
-==========
+### Loader.efi
 
 This EFI binary is created to boot an unsigned EFI file on the platform. Since
 this explicitly breaks the security of the platform, it will first check to
 see if the boot binary is naturally executable and execute it if it is (either
 it's properly signed or the platform isn't in Secure Boot mode).  If the
-binary gives an EFI_ACCESS_DENIED error meaning it isn't properly signed,
+binary gives an `EFI_ACCESS_DENIED` error meaning it isn't properly signed,
 Loader.efi will request present user authorisation before proceeding to boot.
 
 The idea is that Loader.efi may serve as a chain for elilo.efi or another boot
@@ -86,8 +84,7 @@ Loader.efi will now no longer ask for present user authorisation every time
 the system is started.
 
 
-Creating, using and installing your own keys
-============================================
+### Creating, using and installing your own keys
 
 To create PEM files with the certificate and the key for PK for example, do
 
@@ -123,4 +120,3 @@ UpdateVars KEK KEK.auth
 UpdateVars PK PK.auth
 
 And you should now be running in secure mode with your own keys.
-```

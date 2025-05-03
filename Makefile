@@ -27,6 +27,9 @@ include Make.rules
 
 EFISIGNED = $(patsubst %.efi,%-signed.efi,$(EFIFILES))
 
+#efi-updatevar is now the default target
+efiupdate: efi-updatevar
+
 all: $(EFISIGNED) $(BINARIES) $(MANPAGES) noPK.auth $(KEYAUTH) \
 	$(KEYUPDATEAUTH) $(KEYBLACKLISTAUTH) $(KEYHASHBLACKLISTAUTH)
 
