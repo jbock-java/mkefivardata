@@ -1,0 +1,19 @@
+name: make
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: fedora-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Python dependencies
+      run: sudo dnf -y install efivar-devel gnu-efi-devel perl-File-Slurp openssl openssl-devel openssl-devel-engine
+    - name: make
+      run: make
