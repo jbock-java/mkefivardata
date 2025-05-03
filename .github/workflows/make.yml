@@ -1,0 +1,21 @@
+name: make
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Print gcc version
+      run: gcc --version
+    - name: Install dependencies
+      run: sudo apt-get -y install gnu-efi
+    - name: Run make
+      run: make efi-updatevar
