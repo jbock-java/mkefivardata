@@ -32,3 +32,4 @@ efi-readvar
 efi-updatevar
 flash-var
 /build
+/tags

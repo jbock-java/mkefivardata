@@ -115,7 +115,7 @@ flash-var: flash-var.o lib/lib.a
 	$(CC) $(ARCH3264) -o $@ $< lib/lib.a
 
 clean:
-	rm -f PK.* KEK.* DB.* $(EFIFILES) $(EFISIGNED) $(BINARIES) *.o *.so
+	rm -f PK.* KEK.* DB.* $(EFIFILES) $(EFISIGNED) $(BINARIES) *.o *.so *.auth
 	rm -f noPK.*
 	rm -f doc/*.1
 	$(MAKE) -C lib clean
