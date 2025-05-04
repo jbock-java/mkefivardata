@@ -36,7 +36,7 @@ kernel_variable_init(void)
 
 	if (kernel_efi_path)
 		return;
-	mkdtemp(fname);
+	mktemp(fname);
 	snprintf(cmdline, sizeof(cmdline), "mount -l > %s", fname);
 	ret = system(cmdline);
 	if (WEXITSTATUS(ret) != 0)
