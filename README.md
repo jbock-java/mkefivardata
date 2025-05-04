@@ -1,16 +1,16 @@
-# Motivation for this repo
+# efi-updatevar
 
 * [efitools was removed from Fedora 41](https://discussion.fedoraproject.org/t/f41-secure-boot-with-only-your-own-keys/138120)
 * [efitools upstream](https://web.git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git/) is unmaintained
 * sbctl can generate keys and sign, but [efi-updatevar is still needed](https://github.com/Foxboron/sbctl/issues/434)
 
-This repo was created at upstream tag `1.9.2`.
+The upstream efi-updatevar was modified so that it doesn't write to the efivars filesystem directly, but converts the "auth" files to intermediate "vardata" files instead. These vardata files can simply be copied onto the target machine's efivarfs.
 
 ### dependencies
 
 ```sh
 sudo dnf group install c-development
-sudo dnf install efivar-devel gnu-efi-devel sbsigntools perl-File-Slurp openssl openssl-devel openssl-devel-engine help2man
+sudo dnf install efivar-devel gnu-efi-devel openssl openssl-devel openssl-devel-engine help2man
 ```
 
 ### Building efi-updatevar
@@ -45,102 +45,22 @@ sbctl enroll-keys --microsoft --export auth
 Allow writing to efivarfs:
 
 ```sh
-chattr -i /sys/firmware/efi/efivars/db-d719b2cb-3d3a-4596-a3bc-dad00e67656f
+chattr -i /sys/firmware/efi/efivars/*
 ```
 
-Now run `./efi-updatevar db.auth db`.
+Create the vardata files:
 
 ```sh
-################
-## Old README ##
-################
+./efi-updatevar db.auth /tmp/db.vardata db
+./efi-updatevar KEK.auth /tmp/KEK.vardata KEK
+./efi-updatevar PK.auth /tmp/PK.vardata PK
 ```
 
-### How to use these files
+To update the efi variables, simply copy the vardata files to their correct destination in the efivars fs.
+The destination filenames in the efivars fs look random, but they are always the same:
 
-simply typing `make all` will build you everything including sample certificates for
-PK, KEK and db.
-
-The prerequisites are the standard development environment, gnu-efi version
-3.0q or later, help2man and sbsigntools.
-
-There will be one file called LockDown.efi.  If run on your efi platform in
-Setup Mode, this binary will *replace* all the values in the PK, KEK and db
-variables with the ones you just generated and place the platform back into
-User Mode (booting securely).  If you don't want to replace all the variables,
-take a dump of your current variables, see sig-list-to-cert(1), and add them
-to the EFI signature list files before creating LockDown.efi
-
-Say you want to concatenate an existing platform-db.esl file, do this:
-
-make DB.esl
-cat platform.esl DB.esl > newDB.esl
-mv newDB.esl DB.esl
-
-and then make LockDown.efi in the usual way.
-
-All of the EFI programs are also generated in signed form (signed by both db
-and KEK).
-
-
-### Loader.efi
-
-This EFI binary is created to boot an unsigned EFI file on the platform. Since
-this explicitly breaks the security of the platform, it will first check to
-see if the boot binary is naturally executable and execute it if it is (either
-it's properly signed or the platform isn't in Secure Boot mode).  If the
-binary gives an `EFI_ACCESS_DENIED` error meaning it isn't properly signed,
-Loader.efi will request present user authorisation before proceeding to boot.
-
-The idea is that Loader.efi may serve as a chain for elilo.efi or another boot
-loader on distributed linux live and install CDs and even as the boot loader
-for the distribution on the hard disk assuming the user does not wish to take
-control of the platform and replace the keys.
-
-To build a secure bootable CD, simply use Loader.efi as the usual
-/efi/boot/bootX64.efi and place the usual loader in the same directory as the
-file boot.efi.
-
-In order to add further convenience, if the user places the platform in setup
-mode and re-runs the loader, it will ask permission to add the signature the
-unsigned boot loader, boot.efi, to the authorised signatures database, meaning
-Loader.efi will now no longer ask for present user authorisation every time
-the system is started.
-
-
-### Creating, using and installing your own keys
-
-To create PEM files with the certificate and the key for PK for example, do
-
-openssl req -new -x509 -newkey rsa:2048 -subj "/CN=PK/" -keyout PK.key -out PK.crt -days 3650 -nodes -sha256
-
-Which will create a self signed X509 certificate for PK in PK.crt (using
-unprotected key PK.key with the subject common name PK (that's what the CN=PK
-is doing).
-
-You need to create at least three sets of certificates: one for PK, one for
-KEK and one for db.
-
-Now you need to take all the efi binaries in /usr/share/efitools/efi and sign
-them with your own db key using
-
-sbsign --key db.key --cert db.crt --output HelloWorld-signed.efi HelloWorld.efi
-
-To install your new keys on the platform, first create your authorised update
-bundles:
-
-cert-to-sig-list PK.crt PK.esl
-sign-efi-sig-list -k PK.key -c PK.crt PK PK.esl PK.auth
-
-And repeat for KEK and db.  In setup mode, it only matters that the PK update
-PK.auth is signed by the new platform key.  None of the other variables will
-have their signatures checked.
-
-Now on your platform update the variables, remembering to do PK last because
-an update to PK usually puts the platform into secure mode
-
-UpdateVars db db.auth
-UpdateVars KEK KEK.auth
-UpdateVars PK PK.auth
-
-And you should now be running in secure mode with your own keys.
+```sh
+cp /tmp/db.vardata /sys/firmware/efi/efivars/db-d719b2cb-3d3a-4596-a3bc-dad00e67656f
+cp /tmp/KEK.vardata /sys/firmware/efi/efivars/KEK-8be4df61-93ca-11d2-aa0d-00e098032b8c
+cp /tmp/PK.vardata /sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c
+```
