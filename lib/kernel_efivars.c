@@ -4,30 +4,21 @@
  * see COPYING file
  */
 #include <stdlib.h>
-#include <stdint.h>
-#include <sys/types.h>
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <time.h>
 
 #include <efi.h>
 
 #include <kernel_efivars.h>
 #include <guid.h>
-#include <sha256.h>
-#include "efiauthenticated.h"
 
 static char *kernel_efi_path = NULL;
 
-void
-kernel_variable_init(void)
-{
+void kernel_variable_init(void) {
 	char fname[] = "/tmp/efi.XXXXXX";
 	char cmdline[256];
 	int fd, ret;
@@ -36,7 +27,7 @@ kernel_variable_init(void)
 
 	if (kernel_efi_path)
 		return;
-	mktemp(fname);
+	mkstemp(fname);
 	snprintf(cmdline, sizeof(cmdline), "mount -l > %s", fname);
 	ret = system(cmdline);
 	if (WEXITSTATUS(ret) != 0)
@@ -78,84 +69,7 @@ kernel_variable_init(void)
 	strcpy(kernel_efi_path, path);
 }
 
-int
-get_variable(const char *var, EFI_GUID *guid, uint32_t *attributes,
-	     uint32_t *size, void *buf)
-{
-	if (!kernel_efi_path)
-		return -EINVAL;
-
-	int varfs_len = strlen(var) + 48 + strlen(kernel_efi_path);
-	char *varfs = malloc(varfs_len);
-	uint32_t attr;
-	int fd;
-	struct stat st;
-
-	snprintf(varfs, varfs_len, "%s/%s-%s", kernel_efi_path,
-		 var, guid_to_str(guid));
-	fd = open(varfs, O_RDONLY);
-	free(varfs);
-	if (fd < 0)
-		return errno;
-	
-	if (fstat(fd, &st) < 0)
-		return errno;
-	if (size)
-		*size = st.st_size - sizeof(attr);
-
-	read(fd, &attr, sizeof(attr));
-
-	if (attributes)
-		*attributes = attr;
-
-	if (buf)
-		read(fd, buf, st.st_size - sizeof(attr));
-
-	close(fd);
-
-	return 0;
-}
-
-int
-get_variable_alloc(const char *var, EFI_GUID *guid, uint32_t *attributes,
-		   uint32_t *size, uint8_t **buf)
-{
-	uint32_t len;
-	int ret = get_variable(var, guid, NULL, &len, NULL);
-	if (ret)
-		return ret;
-
-	*buf = malloc(len);
-	if (!buf)
-		return -ENOMEM;
-
-	return get_variable(var, guid, attributes, size, *buf);
-}
-
-int
-variable_is_setupmode(void)
-{
-	uint8_t setup_mode;
-
-	get_variable("SetupMode", &GV_GUID, NULL, NULL, &setup_mode);
-
-	return setup_mode;
-}
-
-int
-variable_is_secureboot(void)
-{
-	uint8_t secure_boot;
-
-	get_variable("SecureBoot", &GV_GUID, NULL, NULL, &secure_boot);
-
-	return secure_boot;
-}
-
-int
-set_variable(const char *var, EFI_GUID *guid, uint32_t attributes,
-	     uint32_t size, void *buf)
-{
+int set_variable(const char *var, EFI_GUID *guid, uint32_t attributes, uint32_t size, void *buf) {
 	if (!kernel_efi_path)
 		return -EINVAL;
 
@@ -179,77 +93,4 @@ set_variable(const char *var, EFI_GUID *guid, uint32_t attributes,
 	close(fd);
 
 	return 0;
-}
-int
-set_variable_esl(const char *var, EFI_GUID *guid, uint32_t attributes,
-		 uint32_t size, void *buf)
-{
-	if (!kernel_efi_path)
-		return -EINVAL;
-
-	int newsize = size + OFFSET_OF(EFI_VARIABLE_AUTHENTICATION_2, AuthInfo) + OFFSET_OF(WIN_CERTIFICATE_UEFI_GUID, CertData);
-	char *newdata = malloc(newsize);
-	EFI_VARIABLE_AUTHENTICATION_2 *DescriptorData;
-	EFI_TIME *Time;
-	struct tm tm;
-	time_t t;
-
-	time(&t);
-
-	memset(newdata, '\0', newsize);
-	memcpy(newdata + newsize - size, buf, size);
-	DescriptorData = (EFI_VARIABLE_AUTHENTICATION_2 *)newdata;
-	Time = &DescriptorData->TimeStamp;
-	gmtime_r(&t, &tm);
-	/* FIXME: currently timestamp is one year into future because of
-	 * the way we set up the secure environment  */
-	Time->Year = tm.tm_year + 1900 + 1;
-	/* EFI_TIME Month is 1-12; Unix tm_mon is 0-11 */
-	Time->Month = tm.tm_mon + 1;
-	Time->Day = tm.tm_mday;
-	Time->Hour = tm.tm_hour;
-	Time->Minute = tm.tm_min;
-	Time->Second = tm.tm_sec;
-	DescriptorData->AuthInfo.Hdr.dwLength  = OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData);
-	DescriptorData->AuthInfo.Hdr.wRevision = 0x0200;
-	DescriptorData->AuthInfo.Hdr.wCertificateType = WIN_CERT_TYPE_EFI_GUID;
-	DescriptorData->AuthInfo.CertType =  EFI_CERT_TYPE_PKCS7_GUID;
-
-	int ret = set_variable(var, guid, attributes, newsize, newdata);
-	free(newdata);
-	return ret;
-}
-
-uint8_t *
-hash_to_esl(EFI_GUID *owner, int *len,
-	    uint8_t hash[SHA256_DIGEST_SIZE])
-{
-	const int siglen = sizeof(EFI_SIGNATURE_LIST) + sizeof(EFI_SIGNATURE_DATA) - 1 + SHA256_DIGEST_SIZE;
-	uint8_t *sig = malloc(siglen);
-	EFI_SIGNATURE_LIST *l = (void *)sig;
-	EFI_SIGNATURE_DATA *d = (void *)sig + sizeof(EFI_SIGNATURE_LIST);
-
-	if (len)
-		*len = siglen;
-
-	memset(sig, 0, siglen);
-	l->SignatureType = EFI_CERT_SHA256_GUID;
-	l->SignatureListSize = siglen;
-	l->SignatureSize = 16 +32; /* UEFI defined */
-	memcpy(&d->SignatureData, hash, SHA256_DIGEST_SIZE);
-	d->SignatureOwner = *owner;
-
-	return sig;
-}
-
-int
-set_variable_hash(const char *var, EFI_GUID *owner, uint32_t attributes,
-		  uint8_t hash[SHA256_DIGEST_SIZE])
-{
-	int len;
-	uint8_t *sig = hash_to_esl(&MOK_OWNER, &len, hash);
-
-	int ret = set_variable_esl(var, owner, attributes, len, sig);
-	free(sig);
-	return ret;
 }
