@@ -16,7 +16,7 @@
 #include <kernel_efivars.h>
 #include <guid.h>
 
-static char *kernel_efi_path = NULL;
+static char* kernel_efi_path = NULL;
 
 void kernel_variable_init(void) {
 	char fname[] = "/tmp/efi.XXXXXX";
@@ -69,18 +69,21 @@ void kernel_variable_init(void) {
 	strcpy(kernel_efi_path, path);
 }
 
-int set_variable(const char *var, EFI_GUID *guid, uint32_t attributes, uint32_t size, void *buf) {
+int set_variable(
+    const char* var,
+    EFI_GUID* guid,
+    uint32_t attributes,
+    uint32_t size,
+    void* buf) {
 	if (!kernel_efi_path)
 		return -EINVAL;
 
 	int varfs_len = strlen(var) + 48 + strlen(kernel_efi_path);
-	char *varfs = malloc(varfs_len),
-		*newbuf = malloc(size + sizeof(attributes));
-	int fd;
-
+	char* varfs = malloc(varfs_len);
+	char* newbuf = malloc(size + sizeof(attributes));
 	snprintf(varfs, varfs_len, "%s/%s-%s", kernel_efi_path,
 		 var, guid_to_str(guid));
-	fd = open(varfs, O_RDWR|O_CREAT|O_TRUNC, 0644);
+	int fd = open(varfs, O_RDWR|O_CREAT|O_TRUNC, 0644);
 	free(varfs);
 	if (fd < 0)
 		return errno;
@@ -91,6 +94,5 @@ int set_variable(const char *var, EFI_GUID *guid, uint32_t attributes, uint32_t 
 		return errno;
 
 	close(fd);
-
 	return 0;
 }

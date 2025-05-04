@@ -58,10 +58,6 @@ ifeq ($(ARCH),aarch64)
   FORMAT = -O binary
 endif
 
-%.efi: %.so
-	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
-		   -j .rel -j .rela -j .rel.* -j .rela.* -j .rel* -j .rela* \
-		   -j .reloc $(FORMAT) $*.so $@
 %.so: %.o
 	$(LD) $(LDFLAGS) $^ -o $@ $(LOADLIBES)
 	# check we have no undefined symbols
@@ -82,32 +78,8 @@ endif
 %.esl: %.crt cert-to-efi-sig-list
 	./cert-to-efi-sig-list -g $(MYGUID) $< $@
 
-getcert = $(shell if [ "$(1)" = "PK" -o "$(1)" = "KEK" ]; then echo "-c PK.crt -k PK.key"; else echo "-c KEK.crt -k KEK.key"; fi)
-getvar = $(shell if [ "$(1)" = "PK" -o "$(1)" = "KEK" ]; then echo $(1); else echo db; fi)
-
-%.auth: %.esl PK.crt KEK.crt sign-efi-sig-list
-	./sign-efi-sig-list $(call getcert,$*) $(call getvar,$*) $< $@
-
-%-update.auth: %.esl PK.crt KEK.crt sign-efi-sig-list
-	./sign-efi-sig-list -a $(call getcert,$*) $(call getvar,$*) $< $@
-
-%-pkupdate.auth: %.esl PK.crt sign-efi-sig-list
-	./sign-efi-sig-list -a -c PK.crt -k PK.key $(call getvar,$*) $< $@
-
-%-blacklist.auth: %-blacklist.esl KEK.crt sign-efi-sig-list
-	./sign-efi-sig-list -a -c KEK.crt -k KEK.key dbx $< $@
-
-%-pkblacklist.auth: %-blacklist.esl PK.crt sign-efi-sig-list
-	./sign-efi-sig-list -a -c PK.crt -k PK.key dbx $< $@
-
 %.o: %.c
 	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
-
-%.efi.o: %.c
-	$(CC) $(INCDIR) $(CFLAGS) $(CPPFLAGS) -fno-toplevel-reorder -DBUILD_EFI -c $< -o $@
-
-%.efi.s: %.c
-	$(CC) -S $(INCDIR) $(CFLAGS) $(CPPFLAGS) -fno-toplevel-reorder -DBUILD_EFI -c $< -o $@
 
 %.crt:
 	openssl req -new -x509 -newkey rsa:2048 -subj "/CN=$*/" -keyout $*.key -out $@ -days 3650 -nodes -sha256
@@ -120,9 +92,6 @@ getvar = $(shell if [ "$(1)" = "PK" -o "$(1)" = "KEK" ]; then echo $(1); else ec
 
 %-subkey.crt: %-subkey.csr KEK.crt
 	openssl x509 -req -in $< -CA DB.crt -CAkey DB.key -set_serial 1 -out $@ -days 365
-
-%-signed.efi: %.efi DB.crt
-	sbsign --key DB.key --cert DB.crt --output $@ $<
 
 ##
 # No need for KEK signing

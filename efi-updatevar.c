@@ -15,7 +15,6 @@
 #include <efi.h>
 
 #include <kernel_efivars.h>
-#include <openssl_sign.h>
 #include <guid.h>
 #include <version.h>
 
@@ -45,6 +44,11 @@ int main(int argc, char *argv[]) {
     | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
   char *progname = argv[0];
 
+  if (argc == 1) {
+    usage(progname);
+    return 1;
+  }
+
   if (strcmp("--version", argv[1]) == 0) {
     version(progname);
     return 0;
@@ -67,19 +71,15 @@ int main(int argc, char *argv[]) {
   }
 
   kernel_variable_init();
-  ERR_load_crypto_strings();
-  OpenSSL_add_all_digests();
-  OpenSSL_add_all_ciphers();
 
   int fd = open(file, O_RDONLY);
   if (fd < 0) {
-    fprintf(stderr, "Failed to read file %s: ", file);
-    perror("");
+    fprintf(stderr, "Failed to read file %s\n", file);
     return 1;
   }
   struct stat st;
   if (fstat(fd, &st) < 0) {
-    perror("stat failed");
+    fprintf(stderr, "stat failed\n");
     return 1;
   }
   char* buf = malloc(st.st_size);
@@ -93,8 +93,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (ret != 0) {
-    fprintf(stderr, "Failed to update %s: ", var);
-    perror("");
+    fprintf(stderr, "Failed to update %s\n", var);
     return 1;
   }
   return 0;

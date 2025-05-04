@@ -26,6 +26,30 @@ make
 ctags -R --exclude .git
 ```
 
+### Testing
+
+Install sbctl:
+
+```sh
+dnf copr enable chenxiaolong/sbctl
+dnf install sbctl
+```
+
+Generate auth files:
+
+```sh
+sbctl create-keys
+sbctl enroll-keys --microsoft --export auth
+```
+
+Allow writing to efivarfs:
+
+```sh
+chattr -i /sys/firmware/efi/efivars/db-d719b2cb-3d3a-4596-a3bc-dad00e67656f
+```
+
+Now run `./efi-updatevar db.auth db`.
+
 ```sh
 ################
 ## Old README ##
