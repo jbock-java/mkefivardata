@@ -1,4 +1,4 @@
-BINARY = efi-updatevar
+BINARY = mkefivardata
 
 CFLAGS = 
 CFLAGS += -Iinclude
