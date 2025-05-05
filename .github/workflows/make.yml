@@ -18,4 +18,4 @@ jobs:
     - name: Install dependencies
       run: sudo apt-get -y install gnu-efi
     - name: Run make
-      run: make efi-updatevar
+      run: make
