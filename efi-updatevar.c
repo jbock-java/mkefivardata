@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
   EFI_GUID *owner = get_owner(var);
   if (!owner) {
-    printf(RED "[ERROR]" NC " Variable must be one of: PK, KEK, db, dbx\n", var);
+    printf(RED "[ERROR]" NC " Variable must be one of: PK, KEK, db, dbx\n");
     return 1;
   }
 

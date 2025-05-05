@@ -1,26 +1,18 @@
-BINARIES = efi-updatevar
+BINARY = efi-updatevar
 
-export TOPDIR	:= $(shell pwd)/
+CFLAGS = 
+CFLAGS += -Iinclude
+CFLAGS += -I/usr/include/efi
+CFLAGS += -Wall
+CFLAGS += -pedantic-errors
 
-include Make.rules
+all: $(BINARY).o lib/guid.o lib/kernel_efivars.o
+	$(CC) $(CFLAGS) -o $(BINARY) $^
 
-efi-updatevar: efi-updatevar.o lib/lib.a
-	$(CC) $(ARCH3264) -o $@ $< lib/lib.a
-
-all: $(BINARIES) $(MANPAGES)
-
-install: all
-	$(INSTALL) -m 755 -d $(MANDIR)
-	$(INSTALL) -m 644 $(MANPAGES) $(MANDIR)
-	$(INSTALL) -m 755 -d $(BINDIR)
-	$(INSTALL) -m 755 $(BINARIES) $(BINDIR)
-	$(INSTALL) -m 755 -d $(DOCDIR)
-	$(INSTALL) -m 644 README COPYING $(DOCDIR)
-
-lib/lib.a:
-	$(MAKE) -C lib $(notdir $@)
+%.o: %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm -f $(BINARIES) *.o
-	rm -f doc/*.1
-	$(MAKE) -C lib clean
+	rm -f $(BINARY)
+	rm -f  *.o
+	rm -f lib/*.o

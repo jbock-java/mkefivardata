@@ -57,7 +57,7 @@ This may only work in setup mode.
 
 To verify that the system is in setup mode, run `mokutil --sb-state` or `sbctl status`.
 
-Now copy each vardata file to its correct destination in the efivars fs:
+Now copy each vardata file to its correct destination in the efivars filesystem:
 
 ```sh
 sudo chattr -i /sys/firmware/efi/efivars/*
@@ -68,5 +68,5 @@ sudo cp /tmp/PK.vardata /sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e
 
 Notes:
 
-* The destination filenames in the efivars fs look random, but they are always the same.
+* The destination filenames in the efivars filesystem look random, but they are always the same.
 * After copying `PK.vardata`, the system should not be in setup mode anymore.
