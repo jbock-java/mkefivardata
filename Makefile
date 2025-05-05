@@ -1,4 +1,5 @@
 BINARY = mkefivardata
+BINDIR = $(DESTDIR)/usr/bin
 
 CFLAGS = 
 CFLAGS += -Iinclude
@@ -16,3 +17,7 @@ clean:
 	rm -f $(BINARY)
 	rm -f  *.o
 	rm -f lib/*.o
+
+install: all
+	install -m 755 -d $(BINDIR)
+	install -m 755 $(BINARY) $(BINDIR)

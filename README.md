@@ -22,6 +22,13 @@ make clean
 make
 ```
 
+### Installation
+
+```sh
+#make DESTDIR=build install
+sudo make install
+```
+
 ### Enroll keys
 
 Install sbctl:
@@ -41,9 +48,9 @@ sudo sbctl enroll-keys --microsoft --export auth
 Convert auth files to vardata files:
 
 ```sh
-./mkefivardata db.auth db.vardata db
-./mkefivardata KEK.auth KEK.vardata KEK
-./mkefivardata PK.auth PK.vardata PK
+mkefivardata db.auth db.vardata db
+mkefivardata KEK.auth KEK.vardata KEK
+mkefivardata PK.auth PK.vardata PK
 ```
 
 The remaining steps may only work in setup mode.
