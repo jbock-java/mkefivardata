@@ -4,9 +4,9 @@
 * [efitools upstream](https://web.git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git/) is unmaintained
 * sbctl can generate keys and sign, but [efi-updatevar is still needed](https://github.com/Foxboron/sbctl/issues/434)
 
-The upstream `efi-updatevar` was modified so that it doesn't write to the efivars filesystem directly, but converts the `*.auth` files to intermediate `*.vardata` files instead. To avoid confusion, it was also renamed to `mkefivardata`.
+The upstream `efi-updatevar` was modified so that it converts the `*.auth` files to intermediate `*.vardata` files (by writing to a user-specified file, rather than directly to the efivars filesystem). To avoid confusion, it was also renamed to `mkefivardata`.
 
-It is safe to copy the `*.vardata` files onto an untrusted machine, since they do not contain the private key. To enroll keys, it is enough to copy the vardata files to the appropriate place in the efivars filesystem.
+The `*.vardata` files do not contain the private key used for signing. Hence it is safe to copy them onto an untrusted machine. To enroll the keys, simply copy the vardata files to the appropriate place in the efivars filesystem.
 
 ### Install dependencies
 
