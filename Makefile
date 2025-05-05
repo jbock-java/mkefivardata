@@ -4,7 +4,8 @@ export TOPDIR	:= $(shell pwd)/
 
 include Make.rules
 
-efiupdate: efi-updatevar
+efi-updatevar: efi-updatevar.o lib/lib.a
+	$(CC) $(ARCH3264) -o $@ $< lib/lib.a
 
 all: $(BINARIES) $(MANPAGES)
 
@@ -18,9 +19,6 @@ install: all
 
 lib/lib.a:
 	$(MAKE) -C lib $(notdir $@)
-
-efi-updatevar: efi-updatevar.o lib/lib.a
-	$(CC) $(ARCH3264) -o $@ $< lib/lib.a
 
 clean:
 	rm -f $(BINARIES) *.o
