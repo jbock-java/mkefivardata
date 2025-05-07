@@ -73,3 +73,4 @@ Notes:
 * `cp <var>.vardata /sys/...` is equivalent to `efi-updatevar -f <var>.auth <var>`.
 * The destination filenames in the efivars filesystem may look random, but they are always the same.
 * After copying `PK.vardata`, the system should not be in setup mode anymore.
+* Make a backup of `/var/lib/sbctl`.
