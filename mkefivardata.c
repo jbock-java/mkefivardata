@@ -18,14 +18,14 @@
 #define GREEN "\x1b[32m"
 #define NC "\x1b[0m"
 
-static EFI_GUID GV_GUID = EFI_GLOBAL_VARIABLE;
-static EFI_GUID SIG_DB = { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
+EFI_GUID GV_GUID = EFI_GLOBAL_VARIABLE;
+EFI_GUID SIG_DB = { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
 
-static void usage() {
+void usage() {
   printf("Usage: mkefivardata /path/to/in.auth /path/to/out.vardata PK|KEK|db\n");
 }
 
-static void help() {
+void help() {
   usage();
   printf("Creates a file that can be copied to an efivarfs variable.\n");
 }
@@ -98,10 +98,6 @@ int main(int argc, char *argv[]) {
   close(fd);
   free(buf);
 
-  if (ret == EACCES) {
-    printf(RED "[ERROR]" NC " Cannot write to %s, wrong filesystem permissions\n", vardata_file);
-    return 1;
-  }
   if (ret != 0) {
     printf(RED "[ERROR]" NC " Failed to write to %s\n", vardata_file);
     return 1;
