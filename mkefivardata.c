@@ -15,16 +15,17 @@
 #include <efi.h>
 
 #include <kernel_efivars.h>
-#include <guid.h>
-#include <version.h>
 
-static void usage(char *progname) {
-  printf("Usage: %s: <infile> <vardata_file> <var>\n", progname);
+static EFI_GUID GV_GUID = EFI_GLOBAL_VARIABLE;
+static EFI_GUID SIG_DB = { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
+
+static void usage() {
+  printf("Usage: mkefivardata /path/to/in.auth /path/to/out.vardata PK|KEK|db\n");
 }
 
-static void help(char *progname) {
-  usage(progname);
-  printf("Create a file that can be written to an efivarfs variable.\n");
+static void help() {
+  usage();
+  printf("Creates a file that can be copied to an efivarfs variable.\n");
 }
 
 EFI_GUID* get_owner(char* var) {
@@ -42,23 +43,12 @@ int main(int argc, char *argv[]) {
     | EFI_VARIABLE_RUNTIME_ACCESS
     | EFI_VARIABLE_BOOTSERVICE_ACCESS
     | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
-  char *progname = argv[0];
-
-  if (argc == 1) {
-    usage(progname);
-    return 1;
-  }
-
-  if (strcmp("--version", argv[1]) == 0) {
-    version(progname);
-    return 0;
-  }
   if (strcmp("--help", argv[1]) == 0) {
-    help(progname);
+    help();
     return 0;
   }
   if (argc != 4) {
-    usage(progname);
+    usage();
     return 1;
   }
   char* infile = argv[1];
@@ -97,7 +87,10 @@ int main(int argc, char *argv[]) {
     printf(RED "[ERROR]" NC " Failed to write to %s\n", vardata_file);
     return 1;
   }
-  printf(GREEN "[OK]" NC " Copy %s to %s/%s-%s to update %s.\n",
-    vardata_file, kernel_efi_path, var, guid_to_str(owner), var);
+  printf(GREEN "[OK]" NC " Copy %s to %s/%s-%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx to update %s.\n",
+    vardata_file, kernel_efi_path, var, owner->Data1, owner->Data2, owner->Data3,
+		owner->Data4[0], owner->Data4[1], owner->Data4[2],
+		owner->Data4[3], owner->Data4[4], owner->Data4[5],
+		owner->Data4[6], owner->Data4[7], var);
   return 0;
 }

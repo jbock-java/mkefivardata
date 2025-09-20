@@ -7,7 +7,7 @@ CFLAGS += -I/usr/include/efi
 CFLAGS += -Wall
 CFLAGS += -pedantic-errors
 
-all: $(BINARY).o lib/guid.o lib/kernel_efivars.o
+all: $(BINARY).o lib/kernel_efivars.o
 	$(CC) $(CFLAGS) -o $(BINARY) $^
 
 %.o: %.c
