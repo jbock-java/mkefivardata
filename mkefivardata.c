@@ -14,7 +14,9 @@
 
 #include <efi.h>
 
-#include <kernel_efivars.h>
+#define RED "\x1b[31m"
+#define GREEN "\x1b[32m"
+#define NC "\x1b[0m"
 
 static EFI_GUID GV_GUID = EFI_GLOBAL_VARIABLE;
 static EFI_GUID SIG_DB = { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
@@ -36,6 +38,25 @@ EFI_GUID* get_owner(char* var) {
     return &SIG_DB;
   }
   return NULL;
+}
+
+int write_vardata(
+    const char* vardata_file,
+    uint32_t attributes,
+    uint32_t size,
+    void* buf) {
+
+  char* newbuf = malloc(size + sizeof(attributes));
+  int fd = open(vardata_file, O_RDWR|O_CREAT|O_TRUNC, 0644);
+  if (fd < 0)
+    return errno;
+  memcpy(newbuf, &attributes, sizeof(attributes));
+  memcpy(newbuf + sizeof(attributes), buf, size);
+  ssize_t result = write(fd, newbuf, size + sizeof(attributes));
+  close(fd);
+  if (result != size + sizeof(attributes))
+    return errno;
+  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -61,8 +82,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  kernel_variable_init();
-
   int fd = open(infile, O_RDONLY);
   if (fd < 0) {
     printf(RED "[ERROR]" NC " Failed to read file %s\n", infile);
@@ -87,8 +106,8 @@ int main(int argc, char *argv[]) {
     printf(RED "[ERROR]" NC " Failed to write to %s\n", vardata_file);
     return 1;
   }
-  printf(GREEN "[OK]" NC " Copy %s to %s/%s-%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx to update %s.\n",
-    vardata_file, kernel_efi_path, var, owner->Data1, owner->Data2, owner->Data3,
+  printf(GREEN "[OK]" NC " Copy %s to /sys/firmware/efi/efivars/%s-%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx to update %s.\n",
+    vardata_file, var, owner->Data1, owner->Data2, owner->Data3,
 		owner->Data4[0], owner->Data4[1], owner->Data4[2],
 		owner->Data4[3], owner->Data4[4], owner->Data4[5],
 		owner->Data4[6], owner->Data4[7], var);

@@ -2,12 +2,11 @@ BINARY = mkefivardata
 BINDIR = $(DESTDIR)/usr/bin
 
 CFLAGS = 
-CFLAGS += -Iinclude
 CFLAGS += -I/usr/include/efi
 CFLAGS += -Wall
 CFLAGS += -pedantic-errors
 
-all: $(BINARY).o lib/kernel_efivars.o
+all: $(BINARY).o
 	$(CC) $(CFLAGS) -o $(BINARY) $^
 
 %.o: %.c
