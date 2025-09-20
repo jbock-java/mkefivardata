@@ -48,12 +48,12 @@ sudo sbctl enroll-keys --microsoft --export auth
 Convert auth files to vardata files:
 
 ```sh
-mkefivardata db.auth db.vardata db
-mkefivardata KEK.auth KEK.vardata KEK
-mkefivardata PK.auth PK.vardata PK
+mkefivardata db.auth db.vardata
+mkefivardata KEK.auth KEK.vardata
+mkefivardata PK.auth PK.vardata
 ```
 
-The remaining steps may only work in setup mode.
+The remaining steps will only work in setup mode.
 
 To verify that the system is in setup mode, run `mokutil --sb-state` or `sbctl status`.
 
@@ -72,5 +72,4 @@ Notes:
 
 * `cp <var>.vardata /sys/...` is equivalent to `efi-updatevar -f <var>.auth <var>`.
 * The destination filenames in the efivars filesystem may look random, but they are always the same.
-* After copying `PK.vardata`, the system should not be in setup mode anymore.
-* Make a backup of `/var/lib/sbctl`.
+* Writing to `/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c` ends the setup mode.

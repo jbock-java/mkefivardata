@@ -68,19 +68,12 @@ int main(int argc, char *argv[]) {
     help();
     return 0;
   }
-  if (argc != 4) {
+  if (argc != 3) {
     usage();
     return 1;
   }
   char* infile = argv[1];
   char* vardata_file = argv[2];
-  char* var = argv[3];
-
-  EFI_GUID *owner = get_owner(var);
-  if (!owner) {
-    printf(RED "[ERROR]" NC " Variable must be one of: PK, KEK, db, dbx\n");
-    return 1;
-  }
 
   int fd = open(infile, O_RDONLY);
   if (fd < 0) {
@@ -102,10 +95,24 @@ int main(int argc, char *argv[]) {
     printf(RED "[ERROR]" NC " Failed to write to %s\n", vardata_file);
     return 1;
   }
-  printf(GREEN "[OK]" NC " Copy %s to /sys/firmware/efi/efivars/%s-%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx to update %s.\n",
-    vardata_file, var, owner->Data1, owner->Data2, owner->Data3,
-		owner->Data4[0], owner->Data4[1], owner->Data4[2],
-		owner->Data4[3], owner->Data4[4], owner->Data4[5],
-		owner->Data4[6], owner->Data4[7], var);
+  printf(GREEN "[OK]" NC " Wrote vardata to %s\n", vardata_file);
+  char varnames[][4] = { "db", "KEK", "PK" };
+  for (size_t i = 0; i < sizeof(varnames) / sizeof(varnames[0]); i++) {
+    char* var = varnames[i];
+    EFI_GUID *owner = get_owner(var);
+    printf("To enroll the vardata in the \"%s\" efi variable, run the following commands in \"secure boot setup mode\":\n", var);
+    char str[256];
+    sprintf(str, "/sys/firmware/efi/efivars/%s-%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+      var, owner->Data1, owner->Data2, owner->Data3,
+      owner->Data4[0], owner->Data4[1], owner->Data4[2],
+      owner->Data4[3], owner->Data4[4], owner->Data4[5],
+      owner->Data4[6], owner->Data4[7]);
+    printf("\n");
+    printf("        chattr -i %s\n", str);
+    printf("        cp %s %s\n", vardata_file, str);
+    printf("\n");
+  }
+  printf("Note: If you are enrolling vardata in multiple efi variables, do it in this order: db, KEK, PK.\n");
+  printf("PK must be last, as writing to this variable takes the system out of setup mode.\n");
   return 0;
 }
