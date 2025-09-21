@@ -1,8 +1,8 @@
 # mkefivardata
 
-To enroll signed secureboot keys, [efitools is needed](https://github.com/Foxboron/sbctl/issues/434). mkefivardata converts the signed secureboot keys to a format that can be enrolled on a system where `efitools` is not available. This allows you to rollout your secureboot keys on "untrusted" machines, while keeping your private keys safe.
+To enroll signed secureboot keys, aka `.auth` files, [efitools is needed](https://github.com/Foxboron/sbctl/issues/434). The purpose of `mkefivardata` is to convert  `.auth` to a format which can be enrolled on a system where `efitools` is not available. This facilitates rollout of secureboot keys on "untrusted" machines.
 
-The `*.vardata` files do not contain the private keys used for signing. It is safe to copy them onto an untrusted machine. Note that sbctl can also enroll, but it needs access to the private keys for this.
+Just like the `.auth` files, the `.vardata` files do not contain private signing keys. It is safe to copy them onto an untrusted machine. Note that `sbctl` can also do the enrolling, but it needs access to the private keys.
 
 ### Install dependencies
 
@@ -37,23 +37,21 @@ mkefivardata KEK.auth KEK.vardata
 mkefivardata PK.auth PK.vardata
 ```
 
-The remaining steps will only work in setup mode.
+The remaining steps will only work in [setup mode](https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot).
 
-To verify that the system is in setup mode, run `mokutil --sb-state` or `sbctl status`.
-
-Copy each vardata file to its correct destination in the efivars filesystem:
+Copy the `.vardata` files to the efivars filesystem (requires administrator privilege):
 
 ```sh
-sudo chattr -i /sys/firmware/efi/efivars/*
-sudo cp db.vardata /sys/firmware/efi/efivars/db-d719b2cb-3d3a-4596-a3bc-dad00e67656f
-sudo cp KEK.vardata /sys/firmware/efi/efivars/KEK-8be4df61-93ca-11d2-aa0d-00e098032b8c
-sudo cp PK.vardata /sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c
+chattr -i /sys/firmware/efi/efivars/*
+cp db.vardata /sys/firmware/efi/efivars/db-d719b2cb-3d3a-4596-a3bc-dad00e67656f
+cp KEK.vardata /sys/firmware/efi/efivars/KEK-8be4df61-93ca-11d2-aa0d-00e098032b8c
+cp PK.vardata /sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c
 ```
 
-Congratulations, the keys are now enrolled.
+Congratulations, the secureboot keys are now enrolled.
 
 Notes:
 
 * `cp <var>.vardata /sys/...` is equivalent to `efi-updatevar -f <var>.auth <var>`.
 * The destination filenames in the efivars filesystem may look random, but they are always the same.
-* Writing to `/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c` ends the setup mode.
+* The order of the `cp` commands matters. Writing to `/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c` ends the setup mode.
