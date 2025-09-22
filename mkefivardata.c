@@ -22,7 +22,7 @@ EFI_GUID GV_GUID = EFI_GLOBAL_VARIABLE;
 EFI_GUID SIG_DB = { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
 
 void usage() {
-  printf("Usage: mkefivardata /path/to/in.auth /path/to/out.vardata PK|KEK|db\n");
+  printf("Usage: mkefivardata [-q] /path/to/in.auth /path/to/out.vardata\n");
 }
 
 void help() {
@@ -64,16 +64,26 @@ int main(int argc, char *argv[]) {
     | EFI_VARIABLE_RUNTIME_ACCESS
     | EFI_VARIABLE_BOOTSERVICE_ACCESS
     | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
+  if (argc == 1) {
+    usage();
+    return 1;
+  }
   if (strcmp("--help", argv[1]) == 0) {
     help();
     return 0;
   }
-  if (argc != 3) {
+  int shift = 0;
+  int quiet = 0;
+  if (strcmp("-q", argv[1]) == 0) {
+    quiet = 1;
+    shift++;
+  }
+  if (argc != (3 + shift)) {
     usage();
     return 1;
   }
-  char* infile = argv[1];
-  char* vardata_file = argv[2];
+  char* infile = argv[1 + shift];
+  char* vardata_file = argv[2 + shift];
 
   int fd = open(infile, O_RDONLY);
   if (fd < 0) {
@@ -90,10 +100,12 @@ int main(int argc, char *argv[]) {
   int ret = write_vardata(vardata_file, attributes, st.st_size, buf);
   close(fd);
   free(buf);
-
+  if (quiet != 0) {
+    return ret;
+  }
   if (ret != 0) {
     printf(RED "[ERROR]" NC " Failed to write to %s\n", vardata_file);
-    return 1;
+    return ret;
   }
   printf(GREEN "[OK]" NC " Wrote vardata to %s\n", vardata_file);
   char varnames[][4] = { "db", "KEK", "PK" };
@@ -114,5 +126,5 @@ int main(int argc, char *argv[]) {
   }
   printf("Note: If you are enrolling vardata in multiple efi variables, do it in this order: db, KEK, PK.\n");
   printf("PK must be last, as writing to this variable takes the system out of setup mode.\n");
-  return 0;
+  return ret;
 }
