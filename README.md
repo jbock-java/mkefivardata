@@ -7,14 +7,14 @@ Just like the `.auth` files, the `.vardata` files do not contain private signing
 ### Install dependencies
 
 ```sh
+# Fedora
 sudo dnf group install c-development
-sudo dnf install gnu-efi-devel openssl-devel
+sudo dnf install gnu-efi-devel
 ```
 
 ### Build the binary
 
 ```sh
-make clean
 make
 ```
 

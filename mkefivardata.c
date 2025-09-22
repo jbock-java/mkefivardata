@@ -9,8 +9,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-
-#include <openssl/err.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #include <efi.h>
 
