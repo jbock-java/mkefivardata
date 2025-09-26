@@ -6,3 +6,5 @@
 /mkefivardata
 /tags
 /build
+/cert-to-efi-sig-list
+/*.esl

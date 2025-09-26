@@ -1,9 +1,3 @@
-/*
- * Copyright 2013 <James.Bottomley@HansenPartnership.com>
- *
- * see COPYING file
- */
-
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -21,110 +15,115 @@
 EFI_GUID GV_GUID = EFI_GLOBAL_VARIABLE;
 EFI_GUID SIG_DB = { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
 
-void usage() {
-  printf("Usage: mkefivardata [-q] /path/to/in.auth /path/to/out.vardata\n");
+void usage()
+{
+	printf("Usage: mkefivardata [-q] /path/to/in.auth /path/to/out.vardata\n");
 }
 
-void help() {
-  usage();
-  printf("Creates a file that can be copied to an efivarfs variable.\n");
+void help()
+{
+	usage();
+	printf("Creates a file that can be copied to an efivarfs variable.\n");
 }
 
-EFI_GUID* get_owner(char* var) {
-  if (strcmp(var, "PK") == 0 || strcmp(var, "KEK") == 0) {
-    return &GV_GUID;
-  }
-  if (strcmp(var, "db") == 0 || strcmp(var, "dbx") == 0) {
-    return &SIG_DB;
-  }
-  return NULL;
+EFI_GUID* get_owner(char* var)
+{
+	if (strcmp(var, "PK") == 0 || strcmp(var, "KEK") == 0) {
+		return &GV_GUID;
+	}
+	if (strcmp(var, "db") == 0 || strcmp(var, "dbx") == 0) {
+		return &SIG_DB;
+	}
+	return NULL;
 }
 
 int write_vardata(
-    const char* vardata_file,
-    uint32_t attributes,
-    uint32_t size,
-    void* buf) {
+	const char* vardata_file,
+	uint32_t attributes,
+	uint32_t size,
+	void* buf)
+{
 
-  char* newbuf = malloc(size + sizeof(attributes));
-  int fd = open(vardata_file, O_RDWR|O_CREAT|O_TRUNC, 0644);
-  if (fd < 0)
-    return errno;
-  memcpy(newbuf, &attributes, sizeof(attributes));
-  memcpy(newbuf + sizeof(attributes), buf, size);
-  ssize_t result = write(fd, newbuf, size + sizeof(attributes));
-  close(fd);
-  if (result != size + sizeof(attributes))
-    return errno;
-  return 0;
+	char* newbuf = malloc(size + sizeof(attributes));
+	int fd = open(vardata_file, O_RDWR|O_CREAT|O_TRUNC, 0644);
+	if (fd < 0)
+		return errno;
+	memcpy(newbuf, &attributes, sizeof(attributes));
+	memcpy(newbuf + sizeof(attributes), buf, size);
+	ssize_t result = write(fd, newbuf, size + sizeof(attributes));
+	close(fd);
+	if (result != size + sizeof(attributes))
+		return errno;
+	return 0;
 }
 
-int main(int argc, char *argv[]) {
-  uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
-    | EFI_VARIABLE_RUNTIME_ACCESS
-    | EFI_VARIABLE_BOOTSERVICE_ACCESS
-    | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
-  if (argc == 1) {
-    usage();
-    return 1;
-  }
-  if (strcmp("--help", argv[1]) == 0) {
-    help();
-    return 0;
-  }
-  int shift = 0;
-  int quiet = 0;
-  if (strcmp("-q", argv[1]) == 0) {
-    quiet = 1;
-    shift++;
-  }
-  if (argc != (3 + shift)) {
-    usage();
-    return 1;
-  }
-  char* infile = argv[1 + shift];
-  char* vardata_file = argv[2 + shift];
+int main(int argc, char *argv[])
+{
+	uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
+		| EFI_VARIABLE_RUNTIME_ACCESS
+		| EFI_VARIABLE_BOOTSERVICE_ACCESS
+		| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
+	if (argc == 1) {
+		usage();
+		return 1;
+	}
+	if (strcmp("--help", argv[1]) == 0) {
+		help();
+		return 0;
+	}
+	int shift = 0;
+	int quiet = 0;
+	if (strcmp("-q", argv[1]) == 0) {
+		quiet = 1;
+		shift++;
+	}
+	if (argc != (3 + shift)) {
+		usage();
+		return 1;
+	}
+	char* infile = argv[1 + shift];
+	char* vardata_file = argv[2 + shift];
 
-  int fd = open(infile, O_RDONLY);
-  if (fd < 0) {
-    printf(RED "[ERROR]" NC " Failed to read file %s\n", infile);
-    return 1;
-  }
-  struct stat st;
-  if (fstat(fd, &st) < 0) {
-    printf(RED "[ERROR]" NC " stat failed\n");
-    return 1;
-  }
-  char* buf = malloc(st.st_size);
-  read(fd, buf, st.st_size);
-  int ret = write_vardata(vardata_file, attributes, st.st_size, buf);
-  close(fd);
-  free(buf);
-  if (quiet != 0) {
-    return ret;
-  }
-  if (ret != 0) {
-    printf(RED "[ERROR]" NC " Failed to write to %s\n", vardata_file);
-    return ret;
-  }
-  printf(GREEN "[OK]" NC " Wrote vardata to %s\n", vardata_file);
-  char varnames[][4] = { "db", "KEK", "PK" };
-  for (size_t i = 0; i < sizeof(varnames) / sizeof(varnames[0]); i++) {
-    char* var = varnames[i];
-    EFI_GUID *owner = get_owner(var);
-    printf("To enroll the vardata in the \"%s\" efi variable, run the following commands in \"secure boot setup mode\":\n", var);
-    char str[256];
-    sprintf(str, "/sys/firmware/efi/efivars/%s-%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
-      var, owner->Data1, owner->Data2, owner->Data3,
-      owner->Data4[0], owner->Data4[1], owner->Data4[2],
-      owner->Data4[3], owner->Data4[4], owner->Data4[5],
-      owner->Data4[6], owner->Data4[7]);
-    printf("\n");
-    printf("        chattr -i %s\n", str);
-    printf("        cp %s %s\n", vardata_file, str);
-    printf("\n");
-  }
-  printf("Note: If you are enrolling vardata in multiple efi variables, do it in this order: db, KEK, PK.\n");
-  printf("PK must be last, as writing to this variable takes the system out of setup mode.\n");
-  return ret;
+	int fd = open(infile, O_RDONLY);
+	if (fd < 0) {
+		printf(RED "[ERROR]" NC " Failed to read file %s\n", infile);
+		return 1;
+	}
+	struct stat st;
+	if (fstat(fd, &st) < 0) {
+		printf(RED "[ERROR]" NC " stat failed\n");
+		return 1;
+	}
+	char* buf = malloc(st.st_size);
+	read(fd, buf, st.st_size);
+	int ret = write_vardata(vardata_file, attributes, st.st_size, buf);
+	close(fd);
+	free(buf);
+	if (quiet != 0) {
+		return ret;
+	}
+	if (ret != 0) {
+		printf(RED "[ERROR]" NC " Failed to write to %s\n", vardata_file);
+		return ret;
+	}
+	printf(GREEN "[OK]" NC " Wrote vardata to %s\n", vardata_file);
+	char varnames[][4] = { "db", "KEK", "PK" };
+	for (size_t i = 0; i < sizeof(varnames) / sizeof(varnames[0]); i++) {
+		char* var = varnames[i];
+		EFI_GUID *owner = get_owner(var);
+		printf("To enroll the vardata in the \"%s\" efi variable, run the following commands in \"secure boot setup mode\":\n", var);
+		char str[256];
+		sprintf(str, "/sys/firmware/efi/efivars/%s-%08x-%04hx-%04hx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+			var, owner->Data1, owner->Data2, owner->Data3,
+			owner->Data4[0], owner->Data4[1], owner->Data4[2],
+			owner->Data4[3], owner->Data4[4], owner->Data4[5],
+			owner->Data4[6], owner->Data4[7]);
+		printf("\n");
+		printf("        chattr -i %s\n", str);
+		printf("        cp %s %s\n", vardata_file, str);
+		printf("\n");
+	}
+	printf("Note: If you are enrolling vardata in multiple efi variables, do it in this order: db, KEK, PK.\n");
+	printf("PK must be last, as writing to this variable takes the system out of setup mode.\n");
+	return ret;
 }
