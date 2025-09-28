@@ -55,3 +55,11 @@ Notes:
 * `cp <var>.vardata /sys/...` is equivalent to `efi-updatevar -f <var>.auth <var>`.
 * The destination filenames in the efivars filesystem may look random, but they are always the same.
 * The order of the `cp` commands matters. Writing to `/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c` ends the setup mode.
+
+### cert-to-efi-sig-list
+
+```sh
+make cert-to-efi-sig-list
+./cert-to-efi-sig-list -g a25e0ad4-9c64-11f0-8e7e-0800279b31a2 fedora.crt fedora.esl
+md5sum fedora.esl | sed -E 's/^e868d249.*/OK/'
+```
