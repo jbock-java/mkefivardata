@@ -77,22 +77,27 @@ main(int argc, char *argv[])
         X509 *cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
 	int PkCertLen = i2d_X509(cert, NULL);
 
-	PkCertLen += sizeof(EFI_SIGNATURE_LIST) + OFFSET_OF(EFI_SIGNATURE_DATA, SignatureData);
-	EFI_SIGNATURE_LIST          *PkCert = malloc (PkCertLen);
+	int sizeof_efi_signature_list = 28;
+	PkCertLen += sizeof_efi_signature_list + OFFSET_OF(EFI_SIGNATURE_DATA, SignatureData);
+	void          *PkCert = malloc (PkCertLen);
 	if (!PkCert) {
 		fprintf(stderr, "failed to malloc cert\n");
 		exit(1);
 	}
-	unsigned char *tmp = (unsigned char *)PkCert + sizeof(EFI_SIGNATURE_LIST) + OFFSET_OF(EFI_SIGNATURE_DATA, SignatureData);
+	unsigned char *tmp = (unsigned char *)PkCert + sizeof_efi_signature_list + OFFSET_OF(EFI_SIGNATURE_DATA, SignatureData);
 	i2d_X509(cert, &tmp);
-	PkCert->SignatureListSize   = PkCertLen;
-	PkCert->SignatureSize       = (UINT32) (PkCertLen - sizeof(EFI_SIGNATURE_LIST));
-	PkCert->SignatureHeaderSize = 0;
-	PkCert->SignatureType = EFI_CERT_X509_GUID;
 
-	EFI_SIGNATURE_DATA *PkCertData = (void *)((unsigned char *)PkCert + sizeof(EFI_SIGNATURE_LIST));
+	EFI_SIGNATURE_DATA *PkCertData = (void *)((unsigned char *)PkCert + sizeof_efi_signature_list);
 
 	PkCertData->SignatureOwner = owner; 
+
+	UINT32 signature_size = (UINT32) (PkCertLen - sizeof_efi_signature_list);
+	unsigned char result[PkCertLen];
+	memset(result, 0, PkCertLen);
+	memcpy(result, &EFI_CERT_X509_GUID, sizeof(EFI_GUID));
+	memcpy(result + sizeof(EFI_CERT_X509_GUID), &PkCertLen, sizeof(PkCertLen));
+	memcpy(result + sizeof(EFI_CERT_X509_GUID) + sizeof(PkCertLen) + sizeof(UINT32), &signature_size, sizeof(UINT32));
+	memcpy(result + sizeof_efi_signature_list, PkCertData, PkCertLen - sizeof_efi_signature_list);
 
 	FILE *f = fopen(efifile, "w");
 	if (!f) {
@@ -100,7 +105,7 @@ main(int argc, char *argv[])
 		perror("");
 		exit(1);
 	}
-	if (fwrite(PkCert, 1, PkCertLen, f) != PkCertLen) {
+	if (fwrite(result, 1, PkCertLen, f) != PkCertLen) {
 		perror("Did not write enough bytes to efi file");
 		exit(1);
 	}
@@ -108,3 +113,12 @@ main(int argc, char *argv[])
 
 	return 0;
 }
+
+/*
+typedef struct {          
+    UINT32  Data1;
+    UINT16  Data2;
+    UINT16  Data3;
+    UINT8   Data4[8]; 
+} EFI_GUID;
+*/
