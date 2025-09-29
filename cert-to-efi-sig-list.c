@@ -12,14 +12,12 @@
 #include <efiauthenticated.h>
 #include <version.h>
 
-static void
-usage(const char *progname)
+static void usage(const char *progname)
 {
 	printf("Usage: %s [-g <guid>] <crt file> <efi sig list file>\n", progname);
 }
 
-static void
-help(const char * progname)
+static void help(const char * progname)
 {
 	usage(progname);
 	printf("Take an input X509 certificate (in PEM format) and convert it to an EFI\n"
@@ -32,8 +30,7 @@ help(const char * progname)
 	
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	char *certfile, *efifile;
 	const char *progname = argv[0];
@@ -57,68 +54,42 @@ main(int argc, char *argv[])
 	  
 
 	if (argc != 3) {
-
 		exit(1);
 	}
 
 	certfile = argv[1];
 	efifile = argv[2];
 
-        ERR_load_crypto_strings();
-        OpenSSL_add_all_digests();
-        OpenSSL_add_all_ciphers();
-	/* here we may get highly unlikely failures or we'll get a
-	 * complaint about FIPS signatures (usually becuase the FIPS
-	 * module isn't present).  In either case ignore the errors
-	 * (malloc will cause other failures out lower down */
-	ERR_clear_error();
-
         BIO *cert_bio = BIO_new_file(certfile, "r");
         X509 *cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
-	int PkCertLen = i2d_X509(cert, NULL);
+	unsigned char *PkCert;
+	PkCert = NULL;
+	UINT32 PkCertLen = i2d_X509(cert, &PkCert);
+	UINT32 zero = 0;
 
-	int sizeof_efi_signature_list = 28;
-	PkCertLen += sizeof_efi_signature_list + OFFSET_OF(EFI_SIGNATURE_DATA, SignatureData);
-	void          *PkCert = malloc (PkCertLen);
-	if (!PkCert) {
-		fprintf(stderr, "failed to malloc cert\n");
-		exit(1);
-	}
-	unsigned char *tmp = (unsigned char *)PkCert + sizeof_efi_signature_list + OFFSET_OF(EFI_SIGNATURE_DATA, SignatureData);
-	i2d_X509(cert, &tmp);
+	UINT32 signature_size = PkCertLen + sizeof(EFI_GUID);
+	UINT32 result_size = PkCertLen + 2 * sizeof(EFI_GUID) + 3 * sizeof(UINT32);
+	unsigned char *result = malloc(result_size);
 
-	EFI_SIGNATURE_DATA *PkCertData = (void *)((unsigned char *)PkCert + sizeof_efi_signature_list);
-
-	PkCertData->SignatureOwner = owner; 
-
-	UINT32 signature_size = (UINT32) (PkCertLen - sizeof_efi_signature_list);
-	unsigned char result[PkCertLen];
-	memset(result, 0, PkCertLen);
-	memcpy(result, &EFI_CERT_X509_GUID, sizeof(EFI_GUID));
-	memcpy(result + sizeof(EFI_CERT_X509_GUID), &PkCertLen, sizeof(PkCertLen));
-	memcpy(result + sizeof(EFI_CERT_X509_GUID) + sizeof(PkCertLen) + sizeof(UINT32), &signature_size, sizeof(UINT32));
-	memcpy(result + sizeof_efi_signature_list, PkCertData, PkCertLen - sizeof_efi_signature_list);
+	memcpy(result + 0 * sizeof(EFI_GUID) + 0 * sizeof(UINT32), &EFI_CERT_X509_GUID, sizeof(EFI_GUID));
+	memcpy(result + 1 * sizeof(EFI_GUID) + 0 * sizeof(UINT32), &result_size, sizeof(UINT32));
+	memcpy(result + 1 * sizeof(EFI_GUID) + 1 * sizeof(UINT32), &zero, sizeof(UINT32));
+	memcpy(result + 1 * sizeof(EFI_GUID) + 2 * sizeof(UINT32), &signature_size, sizeof(UINT32));
+	memcpy(result + 1 * sizeof(EFI_GUID) + 3 * sizeof(UINT32), &owner, sizeof(EFI_GUID));
+	memcpy(result + 2 * sizeof(EFI_GUID) + 3 * sizeof(UINT32), PkCert, PkCertLen);
 
 	FILE *f = fopen(efifile, "w");
 	if (!f) {
 		fprintf(stderr, "failed to open efi file %s: ", efifile);
-		perror("");
 		exit(1);
 	}
-	if (fwrite(result, 1, PkCertLen, f) != PkCertLen) {
-		perror("Did not write enough bytes to efi file");
+	if (fwrite(result, 1, result_size, f) != result_size) {
+		fprintf(stderr, "Did not write enough bytes to efi file");
 		exit(1);
 	}
 
+	OPENSSL_free(PkCert);
+	free(result);
 
 	return 0;
 }
-
-/*
-typedef struct {          
-    UINT32  Data1;
-    UINT16  Data2;
-    UINT16  Data3;
-    UINT8   Data4[8]; 
-} EFI_GUID;
-*/

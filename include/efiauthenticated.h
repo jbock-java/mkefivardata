@@ -1,5 +1,4 @@
-#ifndef _INC_EFIAUTHENTICATED_H
-#define _INC_EFIAUTHENTICATED_H
+#pragma once
 #include <wincert.h>
 //***********************************************************************
 // Signature Database
@@ -11,8 +10,6 @@
 typedef UINT8  EFI_SHA256_HASH[32];
 typedef UINT8  EFI_SHA384_HASH[48];
 typedef UINT8  EFI_SHA512_HASH[64];
-
-#pragma pack(1)
 
 // https://stackoverflow.com/questions/484357/trying-to-copy-struct-members-to-byte-array-in-c
 void USARTWrite(const void *object, size_t size)
@@ -56,8 +53,6 @@ typedef struct {
 	///
 	EFI_TIME            TimeOfRevocation;
 } EFI_CERT_X509_SHA512;
-
-#pragma pack()
 
 //
 // _WIN_CERTIFICATE.wCertificateType
@@ -117,4 +112,3 @@ typedef struct {
 #define OFFSET_OF_AUTHINFO2_CERT_DATA ((OFFSET_OF (EFI_VARIABLE_AUTHENTICATION_2, AuthInfo)) + \
                                        (OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData)))
 
-#endif
