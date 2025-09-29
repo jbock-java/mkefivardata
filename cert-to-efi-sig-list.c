@@ -9,7 +9,7 @@
 #include <openssl/err.h>
 
 #include <guid.h>
-#include <variables.h>
+#include <efiauthenticated.h>
 #include <version.h>
 
 static void
