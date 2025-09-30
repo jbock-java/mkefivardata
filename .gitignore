@@ -7,4 +7,5 @@
 /tags
 /build
 /cert-to-efi-sig-list
+/sign-efi-sig-list
 /*.esl
