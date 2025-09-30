@@ -1,5 +1,7 @@
 # mkefivardata
 
+Source: https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git
+
 To enroll signed secureboot keys, aka `.auth` files, [efitools is needed](https://github.com/Foxboron/sbctl/issues/434). The purpose of `mkefivardata` is to convert  `.auth` to a format which can be enrolled on a system where `efitools` is not available. This facilitates rollout of secureboot keys on "untrusted" machines.
 
 Just like the `.auth` files, the `.vardata` files do not contain private signing keys. It is safe to copy them onto an untrusted machine. Note that `sbctl` can also do the enrolling, but it needs access to the private keys.

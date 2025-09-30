@@ -6,6 +6,7 @@ CFLAGS += -I/usr/include/efi
 CFLAGS += -Iinclude
 CFLAGS += -Wall
 CFLAGS += -pedantic-errors
+CFLAGS += -Werror=vla
 
 mkefivardata: mkefivardata.o
 	$(CC) $(CFLAGS) -o mkefivardata $^
