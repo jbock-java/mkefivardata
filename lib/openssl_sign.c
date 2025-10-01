@@ -1,13 +1,6 @@
-/*
- * Copyright 2019 <James.Bottomley@HansenPartnership.com>
- *
- * see COPYING file
- */
-
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/sha.h>
-#include <openssl/engine.h>
 
 #include <openssl_sign.h>
 
@@ -33,7 +26,7 @@ sign_efi_var_ssl(char *payload, int payload_size, EVP_PKEY *pkey, X509 *cert,
 
 int
 sign_efi_var(char *payload, int payload_size, char *keyfile, char *certfile,
-	     unsigned char **sig, int *sigsize, char *engine)
+	     unsigned char **sig, int *sigsize)
 {
 	int ret;
 
@@ -60,7 +53,7 @@ sign_efi_var(char *payload, int payload_size, char *keyfile, char *certfile,
 		return 1;
 	}
 
-	EVP_PKEY *pkey = read_private_key(engine, keyfile);
+	EVP_PKEY *pkey = read_private_key(keyfile);
 	if (!pkey) {
 		ERR_print_errors_fp(stdout);
 		fprintf(stderr, "error reading private key %s\n", keyfile);
@@ -96,61 +89,8 @@ read_pem_private_key(char *keyfile)
 	return pkey;
 }
 
-static int ui_read(UI *ui, UI_STRING *uis)
-{
-	char password[128];
-
-	if (UI_get_string_type(uis) != UIT_PROMPT)
-		return 0;
-
-	EVP_read_pw_string(password, sizeof(password), "Enter engine key pass phrase:", 0);
-	UI_set_result(ui, uis, password);
-	return 1;
-}
-
-static EVP_PKEY *
-read_engine_private_key(char *engine, char *keyfile)
-{
-	UI_METHOD *ui;
-	ENGINE *e;
-	EVP_PKEY *pkey = NULL;
-
-	ENGINE_load_builtin_engines();
-	e = ENGINE_by_id(engine);
-
-	if (!e) {
-		fprintf(stderr, "Failed to load engine: %s\n", engine);
-		ERR_print_errors_fp(stderr);
-		return NULL;
-	}
-
-	ui = UI_create_method("sbsigntools");
-	if (!ui) {
-		fprintf(stderr, "Failed to create UI method\n");
-		ERR_print_errors_fp(stderr);
-		goto out_free;
-	}
-	UI_method_set_reader(ui, ui_read);
-
-	if (!ENGINE_init(e)) {
-		fprintf(stderr, "Failed to initialize engine %s\n", engine);
-		ERR_print_errors_fp(stderr);
-		goto out_free;
-	}
-
-	pkey = ENGINE_load_private_key(e, keyfile, ui, NULL);
-	ENGINE_finish(e);
-
- out_free:
-	ENGINE_free(e);
-	return pkey;
-}
-
 EVP_PKEY *
-read_private_key(char *engine, char *keyfile)
+read_private_key(char *keyfile)
 {
-	if (engine)
-		return read_engine_private_key(engine, keyfile);
-	else
-		return read_pem_private_key(keyfile);
+	return read_pem_private_key(keyfile);
 }

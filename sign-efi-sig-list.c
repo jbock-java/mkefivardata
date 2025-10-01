@@ -12,13 +12,12 @@
 
 #include <variables.h>
 #include <guid.h>
-#include <version.h>
 #include <openssl_sign.h>
 
 static void
 usage(const char *progname)
 {
-	printf("Usage: %s [-r] [-m] [-a] [-g <guid>] [-o] [-t <timestamp>] [-i <infile>] [-c <crt file>] [-k <key file>] [-e <engine>] <var> <efi sig list file> <output file>\n", progname);
+	printf("Usage: %s [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <efi_sig_list_file> <output_file>\n", progname);
 }
 
 static void
@@ -26,24 +25,16 @@ help(const char *progname)
 {
 	usage(progname);
 	printf("Produce an output file with an authentication header for direct\n"
-	       "update to a secure variable.  This output may be signed by the usual keys directly\n"
-	       "or may be split for external signing using the -o and -i options.\n\n"
+	       "update to a secure variable.\n\n"
 	       "Options:\n"
-	       "\t-r               the certificate is rsa2048 rather than x509 [UNIMPLEMENTED]\n"
-	       "\t-m               Use a monotonic count instead of a timestamp [UNIMPLEMENTED]\n"
-	       "\t-a               Prepare the variable for APPEND_WRITE rather than replacement\n"
-	       "\t-o               Do not sign, but output a file of the exact bundle to be signed\n"
 	       "\t-t <timestamp>   Use <timestamp> as the timestamp of the timed variable update\n"
 	       "\t                 If not present, then the timestamp will be taken from system\n"
 	       "\t                 time.  Note you must use this option when doing detached\n"
 	       "\t                 signing otherwise the signature will be incorrect because\n"
 	       "\t                 of timestamp mismatches.\n"
-	       "\t-i <infile>        take a detached signature (in PEM format) of the bundle\n"
-	       "\t                 produced by -o and complete the creation of the update\n"
 	       "\t-g <guid>        Use <guid> as the signature owner GUID\n"
 	       "\t-c <crt>         <crt> is the file containing the signing certificate in PEM format\n"
 	       "\t-k <key>         <key> is the file containing the key for <crt> in PEM format\n"
-	       "\t-e <engine>      Use openssl engine <engine> for the private key\n"
 	       );
 }
 
@@ -51,13 +42,11 @@ int
 main(int argc, char *argv[])
 {
 	char *certfile = NULL, *efifile, *keyfile = NULL, *outfile,
-		*str, *signedinput = NULL, *timestampstr = NULL;
+		*str, *timestampstr = NULL;
 	void *out;
 	const char *progname = argv[0];
-	char *engine = NULL;
 	unsigned char *sigbuf;
-	int rsasig = 0, monotonic = 0, varlen, i, outputforsign = 0, outlen,
-		sigsize;
+	int varlen, outlen, sigsize;
 	EFI_GUID vendor_guid;
 	struct stat st;
 	short unsigned int var[256];
@@ -68,53 +57,23 @@ main(int argc, char *argv[])
 	EFI_TIME timestamp = { 0 };
 
 	while (argc > 1) {
-		if (strcmp("--version", argv[1]) == 0) {
-			version(progname);
-			exit(0);
-		} else if (strcmp("--help", argv[1]) == 0) {
+		if (strcmp("--help", argv[1]) == 0) {
 			help(progname);
 			exit(0);
 		} else if (strcmp("-g", argv[1]) == 0) {
 			str_to_guid(argv[2], &vendor_guid);
 			argv += 2;
 			argc -= 2;
-		} else if (strcmp("-r", argv[1]) == 0) {
-			rsasig = 1;
-			argv += 1;
-			argc -= 1;
 		} else if (strcmp("-t", argv[1]) == 0) {
 			timestampstr = argv[2];
 			argv += 2;
 			argc -= 2;
-		} else if (strcmp("-m", argv[1]) == 0)  {
-			monotonic = 1;
-			argv += 1;
-			argc -= 1;
-			attributes &= ~EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
-			attributes |= EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS;
-
-		} else if (strcmp("-o", argv[1]) == 0) {
-			outputforsign = 1;
-			argv += 1;
-			argc -= 1;
-		} else if (strcmp("-i", argv[1]) == 0) {
-			signedinput = argv[2];
-			argv += 2;
-			argc -= 2;
-		} else if (strcmp("-a", argv[1]) == 0) {
-			attributes |= EFI_VARIABLE_APPEND_WRITE;
-			argv += 1;
-			argc -= 1;
 		} else if (strcmp("-k", argv[1]) == 0) {
 			keyfile = argv[2];
 			argv += 2;
 			argc -= 2;
 		} else if (strcmp("-c", argv[1]) == 0) {
 			certfile = argv[2];
-			argv += 2;
-			argc -= 2;
-		} else if (strcmp("-e", argv[1]) == 0) {
-			engine = argv[2];
 			argv += 2;
 			argc -= 2;
 		} else  {
@@ -124,11 +83,6 @@ main(int argc, char *argv[])
 
 	if (argc != 4) {
 		usage(progname);
-		exit(1);
-	}
-
-	if (rsasig || monotonic) {
-		fprintf(stderr, "FIXME: rsa signatures and monotonic payloads are not implemented\n");
 		exit(1);
 	}
 
@@ -178,9 +132,7 @@ main(int argc, char *argv[])
 	       timestamp.Month, timestamp.Day, timestamp.Hour, timestamp.Minute,
 	       timestamp.Second);
 
-	/* Warning: don't use any glibc wchar functions.  We're building
-	 * with -fshort-wchar which breaks the glibc ABI */
-	i = 0;
+	int i = 0;
 	do {
 		var[i] = str[i];
 	} while (str[i++] != '\0');
@@ -212,33 +164,13 @@ main(int argc, char *argv[])
 
 	printf("Authentication Payload size %d\n", signbuflen);
 
-	if (outputforsign) {
-		out = signbuf;
-		outlen = signbuflen;
-		goto output;
+	if (!keyfile || !certfile) {
+		fprintf(stderr, "Doing signing, need certificate and key\n");
+		exit(1);
 	}
-
-	if (signedinput) {
-		struct stat sti;
-		int infile = open(signedinput, O_RDONLY);
-		if (infile == -1) {
-			fprintf(stderr, "failed to open file %s: ", signedinput);
-			perror("");
-			exit(1);
-		}
-		fstat(infile, &sti);
-		sigbuf = malloc(sti.st_size);
-		sigsize = sti.st_size;
-		read(infile, sigbuf, sigsize);
-	} else {
-		if (!keyfile || !certfile) {
-			fprintf(stderr, "Doing signing, need certificate and key\n");
-			exit(1);
-		}
-		if (sign_efi_var(signbuf, signbuflen, keyfile, certfile,
-				 &sigbuf, &sigsize, engine))
-			exit(1);
-	}
+	if (sign_efi_var(signbuf, signbuflen, keyfile, certfile,
+			 &sigbuf, &sigsize))
+		exit(1);
 	printf("Signature of size %d\n", sigsize);
 
 	EFI_VARIABLE_AUTHENTICATION_2 *var_auth = malloc(sizeof(EFI_VARIABLE_AUTHENTICATION_2) + sigsize);
@@ -251,15 +183,11 @@ main(int argc, char *argv[])
 
 	memcpy(var_auth->AuthInfo.CertData, sigbuf, sigsize);
 	sigbuf = var_auth->AuthInfo.CertData;
-	if (!signedinput) {
-		printf("Signature at: %ld\n", sigbuf - (unsigned char *)var_auth);
-	}
+	printf("Signature at: %ld\n", sigbuf - (unsigned char *)var_auth);
 
 	out = var_auth;
 	outlen = OFFSET_OF(EFI_VARIABLE_AUTHENTICATION_2, AuthInfo.CertData) + sigsize;
 
- output:
-	;
 	int fdoutfile = open(outfile, O_CREAT|O_WRONLY|O_TRUNC, S_IWUSR|S_IRUSR);
 	if (fdoutfile == -1) {
 		fprintf(stderr, "failed to open %s: ", outfile);
@@ -268,14 +196,10 @@ main(int argc, char *argv[])
 	}
 	/* first we write the authentication header */
 	write(fdoutfile, out, outlen);
-	if (!outputforsign)
-		/* Then we write the payload */
-		write(fdoutfile, ptr, st.st_size);
+	/* Then we write the payload */
+	write(fdoutfile, ptr, st.st_size);
 	/* so now the file is complete and can be fed straight into
 	 * SetVariable() as an authenticated variable update */
-#if 0
-	write (fdoutfile, var_auth->AuthInfo.CertData, sigsize);
-#endif
 	close(fdoutfile);
 
 	return 0;
