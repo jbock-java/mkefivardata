@@ -1,10 +1,6 @@
 name: make
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+on: [push]
 
 jobs:
   build:
@@ -13,9 +9,4 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Print gcc version
-      run: gcc --version
-    - name: Install dependencies
-      run: sudo apt-get -y install gnu-efi
-    - name: Run make
-      run: make
+    - run: make test
