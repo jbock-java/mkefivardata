@@ -148,18 +148,14 @@ main(int argc, char *argv[])
 
 	/* signature is over variable name (no null), the vendor GUID, the
 	 * attributes, the timestamp and the contents */
-	int signbuflen = varlen + sizeof(EFI_GUID) + sizeof(UINT32) + sizeof(EFI_TIME) + st.st_size;
+	int signbuf_header_len = varlen + sizeof(EFI_GUID) + sizeof(UINT32) + sizeof(EFI_TIME);
+	int signbuflen = signbuf_header_len + st.st_size;
 	char *signbuf = malloc(signbuflen);
-	char *ptr = signbuf;
-	memcpy(ptr, var, varlen);
-	ptr += varlen;
-	memcpy(ptr, &vendor_guid, sizeof(vendor_guid));
-	ptr += sizeof(vendor_guid);
-	memcpy(ptr, &attributes, sizeof(attributes));
-	ptr += sizeof(attributes);
-	memcpy(ptr, &timestamp, sizeof(timestamp));
-	ptr += sizeof(timestamp);
-	read(fdefifile, ptr, st.st_size);
+	memcpy(signbuf, var, varlen);
+	memcpy(signbuf + varlen, &vendor_guid, sizeof(EFI_GUID));
+	memcpy(signbuf + varlen + sizeof(EFI_GUID), &attributes, sizeof(UINT32));
+	memcpy(signbuf + varlen + sizeof(EFI_GUID) + sizeof(UINT32), &timestamp, sizeof(EFI_TIME));
+	read(fdefifile, signbuf + signbuf_header_len, st.st_size);
 
 	printf("Authentication Payload size %d\n", signbuflen);
 
@@ -194,7 +190,7 @@ main(int argc, char *argv[])
 	/* first we write the authentication header */
 	write(fdoutfile, var_auth, outlen);
 	/* Then we write the payload */
-	write(fdoutfile, ptr, st.st_size);
+	write(fdoutfile, signbuf + signbuf_header_len, st.st_size);
 	/* so now the file is complete and can be fed straight into
 	 * SetVariable() as an authenticated variable update */
 	close(fdoutfile);
