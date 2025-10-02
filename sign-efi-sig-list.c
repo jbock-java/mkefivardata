@@ -14,14 +14,14 @@
 #include <guid.h>
 #include <openssl_sign.h>
 
-static void
-usage(const char *progname)
+#define MAX_VAR_LEN 8
+
+void usage(const char *progname)
 {
 	printf("Usage: %s [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <efi_sig_list_file> <output_file>\n", progname);
 }
 
-static void
-help(const char *progname)
+void help(const char *progname)
 {
 	usage(progname);
 	printf("Produce an output file with an authentication header for direct\n"
@@ -38,8 +38,7 @@ help(const char *progname)
 	       );
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	char *certfile = NULL, *efifile, *keyfile = NULL, *outfile,
 		*str, *timestampstr = NULL;
@@ -48,7 +47,7 @@ main(int argc, char *argv[])
 	int varlen, sigsize;
 	EFI_GUID vendor_guid;
 	struct stat st;
-	short unsigned int var[256];
+	short unsigned int var[MAX_VAR_LEN];
 	UINT32 attributes = EFI_VARIABLE_NON_VOLATILE
 		| EFI_VARIABLE_RUNTIME_ACCESS
 		| EFI_VARIABLE_BOOTSERVICE_ACCESS
@@ -132,11 +131,12 @@ main(int argc, char *argv[])
 	       timestamp.Second);
 
 	int i = 0;
-	do {
+	while (i < MAX_VAR_LEN && str[i] != '\0') {
 		var[i] = str[i];
-	} while (str[i++] != '\0');
+		i++;
+	}
 
-	varlen = (i - 1)*sizeof(short unsigned int);
+	varlen = i * sizeof(short unsigned int);
 
 	int fdefifile = open(efifile, O_RDONLY);
 	if (fdefifile == -1) {
