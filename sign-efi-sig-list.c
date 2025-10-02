@@ -43,10 +43,9 @@ main(int argc, char *argv[])
 {
 	char *certfile = NULL, *efifile, *keyfile = NULL, *outfile,
 		*str, *timestampstr = NULL;
-	void *out;
 	const char *progname = argv[0];
 	unsigned char *sigbuf;
-	int varlen, outlen, sigsize;
+	int varlen, sigsize;
 	EFI_GUID vendor_guid;
 	struct stat st;
 	short unsigned int var[256];
@@ -173,7 +172,8 @@ main(int argc, char *argv[])
 		exit(1);
 	printf("Signature of size %d\n", sigsize);
 
-	EFI_VARIABLE_AUTHENTICATION_2 *var_auth = malloc(sizeof(EFI_VARIABLE_AUTHENTICATION_2) + sigsize);
+	int outlen = OFFSET_OF(EFI_VARIABLE_AUTHENTICATION_2, AuthInfo.CertData) + sigsize;
+	EFI_VARIABLE_AUTHENTICATION_2 *var_auth = malloc(outlen);
 
 	var_auth->TimeStamp = timestamp;
 	var_auth->AuthInfo.CertType = EFI_CERT_TYPE_PKCS7_GUID;
@@ -185,9 +185,6 @@ main(int argc, char *argv[])
 	sigbuf = var_auth->AuthInfo.CertData;
 	printf("Signature at: %ld\n", sigbuf - (unsigned char *)var_auth);
 
-	out = var_auth;
-	outlen = OFFSET_OF(EFI_VARIABLE_AUTHENTICATION_2, AuthInfo.CertData) + sigsize;
-
 	int fdoutfile = open(outfile, O_CREAT|O_WRONLY|O_TRUNC, S_IWUSR|S_IRUSR);
 	if (fdoutfile == -1) {
 		fprintf(stderr, "failed to open %s: ", outfile);
@@ -195,7 +192,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	/* first we write the authentication header */
-	write(fdoutfile, out, outlen);
+	write(fdoutfile, var_auth, outlen);
 	/* Then we write the payload */
 	write(fdoutfile, ptr, st.st_size);
 	/* so now the file is complete and can be fed straight into

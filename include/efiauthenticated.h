@@ -12,6 +12,16 @@ typedef UINT8  EFI_SHA256_HASH[32];
 typedef UINT8  EFI_SHA384_HASH[48];
 typedef UINT8  EFI_SHA512_HASH[64];
 
+void USARTWrite(const void *object, size_t size)
+{
+	const unsigned char *byte;
+	for (byte = object; size--; byte++) {
+		printf("%02X", *byte);
+	}
+	putchar('\n');
+}
+
+
 #pragma pack(1)
 
 typedef struct {
