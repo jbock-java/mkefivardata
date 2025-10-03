@@ -147,6 +147,13 @@ typedef struct {
   UINT8     Signature[256];
 } EFI_CERT_BLOCK_RSA_2048_SHA256;
 
+/// https://uefi.org/specs/UEFI/2.10/32_Secure_Boot_and_Driver_Signing.html
+///
+/// typedef struct {
+///   UINT32             dwLength;
+///   UINT16             wRevision;
+///   UINT16             wCertificateType;
+/// } WIN_CERTIFICATE;
 
 ///
 /// Certificate which encapsulates a GUID-specific digital signature

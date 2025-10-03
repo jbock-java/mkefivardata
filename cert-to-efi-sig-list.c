@@ -64,7 +64,6 @@ int main(int argc, char *argv[])
 	X509 *cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
 	unsigned char *PkCert = NULL;
 	UINT32 PkCertLen = i2d_X509(cert, &PkCert);
-	UINT32 zero = 0;
 
 	UINT32 signature_size = PkCertLen + sizeof(EFI_GUID);
 	UINT32 result_size = PkCertLen + 2 * sizeof(EFI_GUID) + 3 * sizeof(UINT32);
@@ -73,7 +72,7 @@ int main(int argc, char *argv[])
 	// https://uefi.org/specs/UEFI/2.11/32_Secure_Boot_and_Driver_Signing.html
 	memcpy(result + 0 * sizeof(EFI_GUID) + 0 * sizeof(UINT32), &EFI_CERT_X509_GUID, sizeof(EFI_GUID)); // SignatureType
 	memcpy(result + 1 * sizeof(EFI_GUID) + 0 * sizeof(UINT32), &result_size, sizeof(UINT32));          // SignatureListSize
-	memcpy(result + 1 * sizeof(EFI_GUID) + 1 * sizeof(UINT32), &zero, sizeof(UINT32));                 // SignatureHeaderSize
+	memset(result + 1 * sizeof(EFI_GUID) + 1 * sizeof(UINT32), 0, sizeof(UINT32));                 // SignatureHeaderSize
 	memcpy(result + 1 * sizeof(EFI_GUID) + 2 * sizeof(UINT32), &signature_size, sizeof(UINT32));       // SignatureSize
 	memcpy(result + 1 * sizeof(EFI_GUID) + 3 * sizeof(UINT32), &owner, sizeof(EFI_GUID));              // Signatures[0]->SignatureOwner
 	memcpy(result + 2 * sizeof(EFI_GUID) + 3 * sizeof(UINT32), PkCert, PkCertLen);                     // Signatures[0]->SignatureData

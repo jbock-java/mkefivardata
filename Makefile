@@ -28,6 +28,9 @@ sigtest: sign-efi-sig-list
 	./sign-efi-sig-list -g $(TEST_OWNER) -t "2025-03-24 14:26:01" -k KEK.key -c KEK.crt db fedora.esl fedora.auth
 	md5sum fedora.auth | grep -q ^960a4d050 && printf "\033[1;32m[OK]\033[0m\n" || printf "\033[1;31m[FAIL]\033[0m\n"
 
+expand:
+	$(CC) -E $(CFLAGS) sign-efi-sig-list.c
+
 clean:
 	rm -f mkefivardata cert-to-efi-sig-list sign-efi-sig-list
 

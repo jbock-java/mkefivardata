@@ -168,18 +168,47 @@ int main(int argc, char *argv[])
 		exit(1);
 	printf("Signature of size %d\n", sigsize);
 
-	int outlen = OFFSET_OF(EFI_VARIABLE_AUTHENTICATION_2, AuthInfo.CertData) + sigsize;
-	EFI_VARIABLE_AUTHENTICATION_2 *var_auth = malloc(outlen);
+	int outlen = sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize + st.st_size;
+	unsigned char *var_auth = malloc(outlen);
 
-	var_auth->TimeStamp = timestamp;
-	var_auth->AuthInfo.CertType = EFI_CERT_TYPE_PKCS7_GUID;
-	var_auth->AuthInfo.Hdr.dwLength = sigsize + OFFSET_OF(WIN_CERTIFICATE_UEFI_GUID, CertData);
-	var_auth->AuthInfo.Hdr.wRevision = 0x0200;
-	var_auth->AuthInfo.Hdr.wCertificateType = WIN_CERT_TYPE_EFI_GUID;
+	// The length of the entire certificate, including the length of the header, in bytes.
+	// -- Is this correct? What about sizeof(EFI_TIME) and st.st_size?
+	UINT32 dwLength = sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize;
 
-	memcpy(var_auth->AuthInfo.CertData, sigbuf, sigsize);
-	sigbuf = var_auth->AuthInfo.CertData;
-	printf("Signature at: %ld\n", sigbuf - (unsigned char *)var_auth);
+	// The revision level of the WIN_CERTIFICATE structure. The current revision level is 0x0200.
+	UINT16 wRevision = 0x0200;
+
+	// The certificate type. See WIN_CERT_TYPE_xxx for the UEFI certificate types.
+	// The UEFI specification reserves the range of certificate type values from 0x0EF0 to 0x0EFF.
+	UINT16 wCertificateType = WIN_CERT_TYPE_EFI_GUID;
+
+	// This is the unique id which determines the format of the CertData.
+	EFI_GUID certType = EFI_CERT_TYPE_PKCS7_GUID;
+
+	// EFI_TIME TimeStamp
+	memcpy(var_auth, &timestamp, sizeof(EFI_TIME));
+
+	// UINT32 AuthInfo.Hdr.dwLength
+	memcpy(var_auth + sizeof(EFI_TIME), &dwLength, sizeof(UINT32));
+
+	// UINT16 AuthInfo.Hdr.wRevision
+	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(UINT32), &wRevision, sizeof(UINT16));
+
+	// UINT16 AuthInfo.Hdr.wCertificateType
+	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(UINT32) + sizeof(UINT16),
+		&wCertificateType, sizeof(UINT16));
+
+	// EFI_GUID AuthInfo.CertType
+	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE),
+		&certType, sizeof(EFI_GUID));
+
+	// AuthInfo.CertData
+	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID),
+		sigbuf, sigsize);
+
+	// Authentication header complete, now write the payload
+	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize,
+		signbuf + signbuf_header_len, st.st_size);
 
 	int fdoutfile = open(outfile, O_CREAT|O_WRONLY|O_TRUNC, S_IWUSR|S_IRUSR);
 	if (fdoutfile == -1) {
@@ -187,10 +216,9 @@ int main(int argc, char *argv[])
 		perror("");
 		exit(1);
 	}
-	/* first we write the authentication header */
+
 	write(fdoutfile, var_auth, outlen);
-	/* Then we write the payload */
-	write(fdoutfile, signbuf + signbuf_header_len, st.st_size);
+
 	/* so now the file is complete and can be fed straight into
 	 * SetVariable() as an authenticated variable update */
 	close(fdoutfile);
