@@ -48,11 +48,12 @@ int main(int argc, char *argv[])
 	EFI_GUID vendor_guid;
 	struct stat st;
 	short unsigned int var[MAX_VAR_LEN];
-	UINT32 attributes = EFI_VARIABLE_NON_VOLATILE
+	uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
 		| EFI_VARIABLE_RUNTIME_ACCESS
 		| EFI_VARIABLE_BOOTSERVICE_ACCESS
 		| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
-	EFI_TIME timestamp = { 0 };
+	EFI_TIME timestamp;
+	memset(&timestamp, 0, sizeof(timestamp));
 
 	while (argc > 1) {
 		if (strcmp("--help", argv[1]) == 0) {
@@ -95,7 +96,6 @@ int main(int argc, char *argv[])
 		vendor_guid = (EFI_GUID){ 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
 	}
 
-	memset(&timestamp, 0, sizeof(timestamp));
 	time_t t;
 	struct tm *tm, tms;
 
@@ -141,20 +141,19 @@ int main(int argc, char *argv[])
 	int fdefifile = open(efifile, O_RDONLY);
 	if (fdefifile == -1) {
 		fprintf(stderr, "failed to open file %s: ", efifile);
-		perror("");
 		exit(1);
 	}
 	fstat(fdefifile, &st);
 
 	/* signature is over variable name (no null), the vendor GUID, the
 	 * attributes, the timestamp and the contents */
-	int signbuf_header_len = varlen + sizeof(EFI_GUID) + sizeof(UINT32) + sizeof(EFI_TIME);
+	int signbuf_header_len = varlen + sizeof(EFI_GUID) + sizeof(uint32_t) + sizeof(EFI_TIME);
 	int signbuflen = signbuf_header_len + st.st_size;
 	char *signbuf = malloc(signbuflen);
 	memcpy(signbuf, var, varlen);
 	memcpy(signbuf + varlen, &vendor_guid, sizeof(EFI_GUID));
-	memcpy(signbuf + varlen + sizeof(EFI_GUID), &attributes, sizeof(UINT32));
-	memcpy(signbuf + varlen + sizeof(EFI_GUID) + sizeof(UINT32), &timestamp, sizeof(EFI_TIME));
+	memcpy(signbuf + varlen + sizeof(EFI_GUID), &attributes, sizeof(uint32_t));
+	memcpy(signbuf + varlen + sizeof(EFI_GUID) + sizeof(uint32_t), &timestamp, sizeof(EFI_TIME));
 	read(fdefifile, signbuf + signbuf_header_len, st.st_size);
 
 	printf("Authentication Payload size %d\n", signbuflen);
@@ -172,15 +171,15 @@ int main(int argc, char *argv[])
 	unsigned char *var_auth = malloc(outlen);
 
 	// The length of the entire certificate, including the length of the header, in bytes.
-	// -- Is this correct? What about sizeof(EFI_TIME) and st.st_size?
-	UINT32 dwLength = sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize;
+	// -- Is the timestamp not part of the header?
+	uint32_t dwLength = sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize;
 
 	// The revision level of the WIN_CERTIFICATE structure. The current revision level is 0x0200.
-	UINT16 wRevision = 0x0200;
+	uint16_t wRevision = 0x0200;
 
 	// The certificate type. See WIN_CERT_TYPE_xxx for the UEFI certificate types.
 	// The UEFI specification reserves the range of certificate type values from 0x0EF0 to 0x0EFF.
-	UINT16 wCertificateType = WIN_CERT_TYPE_EFI_GUID;
+	uint16_t wCertificateType = WIN_CERT_TYPE_EFI_GUID;
 
 	// This is the unique id which determines the format of the CertData.
 	EFI_GUID certType = EFI_CERT_TYPE_PKCS7_GUID;
@@ -189,14 +188,14 @@ int main(int argc, char *argv[])
 	memcpy(var_auth, &timestamp, sizeof(EFI_TIME));
 
 	// UINT32 AuthInfo.Hdr.dwLength
-	memcpy(var_auth + sizeof(EFI_TIME), &dwLength, sizeof(UINT32));
+	memcpy(var_auth + sizeof(EFI_TIME), &dwLength, sizeof(uint32_t));
 
 	// UINT16 AuthInfo.Hdr.wRevision
-	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(UINT32), &wRevision, sizeof(UINT16));
+	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(uint32_t), &wRevision, sizeof(uint16_t));
 
 	// UINT16 AuthInfo.Hdr.wCertificateType
-	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(UINT32) + sizeof(UINT16),
-		&wCertificateType, sizeof(UINT16));
+	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(uint32_t) + sizeof(uint16_t),
+		&wCertificateType, sizeof(uint16_t));
 
 	// EFI_GUID AuthInfo.CertType
 	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE),
@@ -213,7 +212,6 @@ int main(int argc, char *argv[])
 	int fdoutfile = open(outfile, O_CREAT|O_WRONLY|O_TRUNC, S_IWUSR|S_IRUSR);
 	if (fdoutfile == -1) {
 		fprintf(stderr, "failed to open %s: ", outfile);
-		perror("");
 		exit(1);
 	}
 

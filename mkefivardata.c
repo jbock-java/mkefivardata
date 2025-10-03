@@ -39,10 +39,13 @@ EFI_GUID* get_owner(char* var)
 
 int write_vardata(
 	const char* vardata_file,
-	uint32_t attributes,
 	uint32_t size,
 	void* buf)
 {
+	uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
+		| EFI_VARIABLE_RUNTIME_ACCESS
+		| EFI_VARIABLE_BOOTSERVICE_ACCESS
+		| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
 
 	char* newbuf = malloc(size + sizeof(attributes));
 	int fd = open(vardata_file, O_RDWR|O_CREAT|O_TRUNC, 0644);
@@ -59,10 +62,6 @@ int write_vardata(
 
 int main(int argc, char *argv[])
 {
-	uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
-		| EFI_VARIABLE_RUNTIME_ACCESS
-		| EFI_VARIABLE_BOOTSERVICE_ACCESS
-		| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
 	if (argc == 1) {
 		usage();
 		return 1;
@@ -96,7 +95,7 @@ int main(int argc, char *argv[])
 	}
 	char* buf = malloc(st.st_size);
 	read(fd, buf, st.st_size);
-	int ret = write_vardata(vardata_file, attributes, st.st_size, buf);
+	int ret = write_vardata(vardata_file, st.st_size, buf);
 	close(fd);
 	free(buf);
 	if (quiet != 0) {
