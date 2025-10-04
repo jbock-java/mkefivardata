@@ -25,11 +25,7 @@ esltest: cert-to-efi-sig-list
 	md5sum fedora.esl | grep -q ^e868d249 && printf "\033[1;32m[OK]\033[0m\n"
 
 sigtest: sign-efi-sig-list
-	./sign-efi-sig-list -g $(TEST_OWNER) -t "2025-03-24 14:26:01" -k KEK.key -c KEK.crt db fedora.esl fedora.auth
-	md5sum fedora.auth | grep -q ^960a4d050 && printf "\033[1;32m[OK]\033[0m\n"
-
-efitest: mkefivardata
-	./mkefivardata -q fedora.auth fedora.vardata
+	./sign-efi-sig-list -g $(TEST_OWNER) -t "2025-03-24 14:26:01" -k KEK.key -c KEK.crt db fedora.esl fedora.vardata
 	md5sum fedora.vardata | grep -q ^c0c07e6b0 && printf "\033[1;32m[OK]\033[0m\n"
 
 expand:

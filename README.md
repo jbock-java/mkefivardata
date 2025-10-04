@@ -2,9 +2,11 @@
 
 [Upstream](https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git)
 
-[Services Runtime Services](https://uefi.org/specs/UEFI/2.11/08_Services_Runtime_Services.html)
+[Services - Runtime Services](https://uefi.org/specs/UEFI/2.11/08_Services_Runtime_Services.html)
 
 [Secure Boot and Driver Signing](https://uefi.org/specs/UEFI/2.11/32_Secure_Boot_and_Driver_Signing.html)
+
+[kernel efivarfs](https://www.kernel.org/doc/html/latest/filesystems/efivarfs.html)
 
 To enroll signed secureboot keys, aka `.auth` files, [efitools is needed](https://github.com/Foxboron/sbctl/issues/434). The purpose of `mkefivardata` is to convert  `.auth` to a format which can be enrolled on a system where `efitools` is not available. This facilitates rollout of secureboot keys on "untrusted" machines.
 

@@ -16,16 +16,23 @@
 
 #define MAX_VAR_LEN 8
 
-void usage(const char *progname)
+void usage()
 {
-	printf("Usage: %s [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <efi_sig_list_file> <output_file>\n", progname);
+	printf("Usage: sign-efi-sig-list [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <x.esl> <x.vardata>\n");
 }
 
-void help(const char *progname)
+void help()
 {
-	usage(progname);
+	usage();
 	printf("Produce an output file with an authentication header for direct\n"
 	       "update to a secure variable.\n\n"
+	       "Note:"
+	       "This version of sign-efi-sig-list does not create the usual \"auth\" format."
+	       "Instead, it creates \"vardata\" format for the \"efivarfs\" filesystem, which\n"
+	       "includes four leading bytes of \"attributes\" data.\n"
+	       "To update the efi variable <var>, simply copy the \"vardata\" file\n"
+	       "to the appropriate place in the efivarfs filesystem.\n"
+	       "So no \"efi-updatevar\" binary is needed.\n\n"
 	       "Options:\n"
 	       "\t-t <timestamp>   Use <timestamp> as the timestamp of the timed variable update\n"
 	       "\t                 If not present, then the timestamp will be taken from system\n"
@@ -41,13 +48,11 @@ void help(const char *progname)
 int main(int argc, char *argv[])
 {
 	char *certfile = NULL, *efifile, *keyfile = NULL, *outfile,
-		*str, *timestampstr = NULL;
-	const char *progname = argv[0];
+		*var_str, *timestampstr = NULL;
 	unsigned char *sigbuf;
 	int varlen, sigsize;
 	EFI_GUID vendor_guid;
 	struct stat st;
-	short unsigned int var[MAX_VAR_LEN];
 	uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
 		| EFI_VARIABLE_RUNTIME_ACCESS
 		| EFI_VARIABLE_BOOTSERVICE_ACCESS
@@ -55,9 +60,9 @@ int main(int argc, char *argv[])
 	EFI_TIME timestamp;
 	memset(&timestamp, 0, sizeof(timestamp));
 
-	while (argc > 1) {
+	while (argc) {
 		if (strcmp("--help", argv[1]) == 0) {
-			help(progname);
+			help();
 			exit(0);
 		} else if (strcmp("-g", argv[1]) == 0) {
 			str_to_guid(argv[2], &vendor_guid);
@@ -81,19 +86,19 @@ int main(int argc, char *argv[])
 	}
 
 	if (argc != 4) {
-		usage(progname);
+		usage();
 		exit(1);
 	}
 
-	str = argv[1];
+	var_str = argv[1];
 	efifile = argv[2];
 	outfile = argv[3];
 
 	/* Specific GUIDs for special variables */
-	if (strcmp(str, "PK") == 0 || strcmp(str, "KEK") == 0) {
-		vendor_guid = (EFI_GUID)EFI_GLOBAL_VARIABLE;
-	} else if (strcmp(str, "db") == 0 || strcmp(str, "dbx") == 0) {
-		vendor_guid = (EFI_GUID){ 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0,  0xe, 0x67, 0x65, 0x6f }};
+	if (strcmp(var_str, "PK") == 0 || strcmp(var_str, "KEK") == 0) {
+		vendor_guid = (EFI_GUID) EFI_GLOBAL_VARIABLE;
+	} else if (strcmp(var_str, "db") == 0 || strcmp(var_str, "dbx") == 0) {
+		vendor_guid = (EFI_GUID) { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0, 0xe, 0x67, 0x65, 0x6f }};
 	}
 
 	time_t t;
@@ -107,10 +112,6 @@ int main(int argc, char *argv[])
 		/* timestamp.Year is from 0 not 1900 as tm year is */
 		tm->tm_year += 1900;
 		tm->tm_mon += 1; /* tm_mon is 0-11 not 1-12 */
-	} else if (attributes & EFI_VARIABLE_APPEND_WRITE) {
-		/* for append update timestamp should be zero */
-		memset(&tms, 0, sizeof(tms));
-		tm = &tms;
 	} else {
 		time(&t);
 		tm = localtime(&t);
@@ -131,12 +132,12 @@ int main(int argc, char *argv[])
 	       timestamp.Second);
 
 	int i = 0;
-	while (i < MAX_VAR_LEN && str[i] != '\0') {
-		var[i] = str[i];
+	unsigned short int var[MAX_VAR_LEN];
+	while (i < MAX_VAR_LEN && var_str[i] != '\0') {
+		var[i] = var_str[i];
 		i++;
 	}
-
-	varlen = i * sizeof(short unsigned int);
+	varlen = i * sizeof(unsigned short int);
 
 	int fdefifile = open(efifile, O_RDONLY);
 	if (fdefifile == -1) {
@@ -167,7 +168,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	printf("Signature of size %d\n", sigsize);
 
-	int outlen = sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize + st.st_size;
+
+	int outlen = sizeof(uint32_t) + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize + st.st_size;
 	unsigned char *var_auth = malloc(outlen);
 
 	// The length of the entire certificate, including the length of the header, in bytes.
@@ -184,29 +186,32 @@ int main(int argc, char *argv[])
 	// This is the unique id which determines the format of the CertData.
 	EFI_GUID certType = EFI_CERT_TYPE_PKCS7_GUID;
 
+	// efivarfs vardata format: 4_bytes_of_attributes + efivar_data
+	memcpy(var_auth, &attributes, sizeof(uint32_t));
+
 	// EFI_TIME TimeStamp
-	memcpy(var_auth, &timestamp, sizeof(EFI_TIME));
+	memcpy(var_auth + sizeof(uint32_t), &timestamp, sizeof(EFI_TIME));
 
 	// UINT32 AuthInfo.Hdr.dwLength
-	memcpy(var_auth + sizeof(EFI_TIME), &dwLength, sizeof(uint32_t));
+	memcpy(var_auth + sizeof(uint32_t) + sizeof(EFI_TIME), &dwLength, sizeof(uint32_t));
 
 	// UINT16 AuthInfo.Hdr.wRevision
-	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(uint32_t), &wRevision, sizeof(uint16_t));
+	memcpy(var_auth + sizeof(uint32_t) + sizeof(EFI_TIME) + sizeof(uint32_t), &wRevision, sizeof(uint16_t));
 
 	// UINT16 AuthInfo.Hdr.wCertificateType
-	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(uint32_t) + sizeof(uint16_t),
+	memcpy(var_auth + sizeof(uint32_t) + sizeof(EFI_TIME) + sizeof(uint32_t) + sizeof(uint16_t),
 		&wCertificateType, sizeof(uint16_t));
 
 	// EFI_GUID AuthInfo.CertType
-	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE),
+	memcpy(var_auth + sizeof(uint32_t) + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE),
 		&certType, sizeof(EFI_GUID));
 
 	// AuthInfo.CertData
-	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID),
+	memcpy(var_auth + sizeof(uint32_t) + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID),
 		sigbuf, sigsize);
 
-	// Authentication header complete, now write the payload
-	memcpy(var_auth + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize,
+	// Authentication header complete, now write the payload (the original esl)
+	memcpy(var_auth + sizeof(uint32_t) + sizeof(EFI_TIME) + sizeof(WIN_CERTIFICATE) + sizeof(EFI_GUID) + sigsize,
 		signbuf + signbuf_header_len, st.st_size);
 
 	int fdoutfile = open(outfile, O_CREAT|O_WRONLY|O_TRUNC, S_IWUSR|S_IRUSR);
