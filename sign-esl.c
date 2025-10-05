@@ -16,9 +16,14 @@
 
 #define MAX_VAR_LEN 8
 
+static const uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
+	| EFI_VARIABLE_RUNTIME_ACCESS
+	| EFI_VARIABLE_BOOTSERVICE_ACCESS
+	| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
+
 void usage()
 {
-	printf("Usage: sign-efi-sig-list [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <x.esl> <x.vardata>\n");
+	printf("Usage: sign-esl [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <x.esl> <x.vardata>\n");
 }
 
 void help()
@@ -26,13 +31,16 @@ void help()
 	usage();
 	printf("Produce an output file with an authentication header for direct\n"
 	       "update to a secure variable.\n\n"
-	       "Note:"
-	       "This version of sign-efi-sig-list does not create the usual \"auth\" format."
-	       "Instead, it creates \"vardata\" format for the \"efivarfs\" filesystem, which\n"
-	       "includes four leading bytes of \"attributes\" data.\n"
-	       "To update the efi variable <var>, simply copy the \"vardata\" file\n"
-	       "to the appropriate place in the efivarfs filesystem.\n"
-	       "So no \"efi-updatevar\" binary is needed.\n\n"
+	       "Note:\n"
+	       "This tool is derived from efitools' \"sign-efi-sig-list\".\n"
+	       "The name was changed to avoid confusion, because the output format is different:\n"
+	       "\"sign-efi-sig-list\" creates output in \"auth\" format,\n"
+	       "which is suitable for UEFI's standard \"SetVariable\" call.\n"
+	       "\"sign-esl\" instead outputs the native format of the Linux kernel's \"efivarfs\" filesystem,\n"
+	       "which is called \"vardata\" here.\n"
+	       "This can be more convenient, because a \"vardata\" file can be copied directly\n"
+	       "to the efivarfs filesystem.\n"
+	       "There is no need for an additional tool like \"efi-updatevar\".\n\n"
 	       "Options:\n"
 	       "\t-t <timestamp>   Use <timestamp> as the timestamp of the timed variable update\n"
 	       "\t                 If not present, then the timestamp will be taken from system\n"
@@ -53,10 +61,6 @@ int main(int argc, char *argv[])
 	int varlen, sigsize;
 	EFI_GUID vendor_guid;
 	struct stat st;
-	uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
-		| EFI_VARIABLE_RUNTIME_ACCESS
-		| EFI_VARIABLE_BOOTSERVICE_ACCESS
-		| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
 	EFI_TIME timestamp;
 	memset(&timestamp, 0, sizeof(timestamp));
 
@@ -186,7 +190,7 @@ int main(int argc, char *argv[])
 	// This is the unique id which determines the format of the CertData.
 	EFI_GUID certType = EFI_CERT_TYPE_PKCS7_GUID;
 
-	// efivarfs vardata format: 4_bytes_of_attributes + efivar_data
+	// write 4 bytes of attributes
 	memcpy(var_auth, &attributes, sizeof(uint32_t));
 
 	// EFI_TIME TimeStamp

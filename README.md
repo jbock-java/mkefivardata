@@ -1,39 +1,41 @@
-# mkefivardata
+# sign-esl
 
-[Upstream](https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git)
+```
+This tool is derived from efitools' "sign-efi-sig-list".
+The name was changed to avoid confusion, because the output format is different:
+"sign-efi-sig-list" creates output in "auth" format,
+which is suitable for UEFI's standard "SetVariable" call.
+"sign-esl" instead outputs the native format of the Linux kernel's "efivarfs" filesystem,
+which is called "vardata" here.
+This can be more convenient, because a "vardata" file can be copied directly
+to the efivarfs filesystem.
+There is no need for an additional tool like "efi-updatevar".
+```
 
-[Services - Runtime Services](https://uefi.org/specs/UEFI/2.11/08_Services_Runtime_Services.html)
+[efitools upstream](https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git)
 
-[Secure Boot and Driver Signing](https://uefi.org/specs/UEFI/2.11/32_Secure_Boot_and_Driver_Signing.html)
+[docs: UEFI Services - Runtime Services](https://uefi.org/specs/UEFI/2.11/08_Services_Runtime_Services.html)
 
-[kernel efivarfs](https://www.kernel.org/doc/html/latest/filesystems/efivarfs.html)
+[docs: UEFI Secure Boot and Driver Signing](https://uefi.org/specs/UEFI/2.11/32_Secure_Boot_and_Driver_Signing.html)
 
-To enroll signed secureboot keys, aka `.auth` files, [efitools is needed](https://github.com/Foxboron/sbctl/issues/434). The purpose of `mkefivardata` is to convert  `.auth` to a format which can be enrolled on a system where `efitools` is not available. This facilitates rollout of secureboot keys on "untrusted" machines.
-
-Just like the `.auth` files, the `.vardata` files do not contain private signing keys. It is safe to copy them onto an untrusted machine. Note that `sbctl` can also do the enrolling, but it needs access to the private keys.
+[docs: kernel efivarfs](https://www.kernel.org/doc/html/latest/filesystems/efivarfs.html)
 
 ### Install dependencies
 
 ```sh
+# Ubuntu / Debian
+sudo apt-get install gnu-efi
 # Fedora
-sudo dnf group install c-development
 sudo dnf install gnu-efi-devel
 ```
 
-### Build the binary
+### Build the binaries
 
 ```sh
-make
+make cert-to-efi-sig-list sign-esl
 ```
 
-### Installation
-
-```sh
-#make DESTDIR=build install
-sudo make install
-```
-
-### Create and enroll your keys
+### Create and enroll your keys (FIXME)
 
 Signed secureboot keys can be generated with [efi-mkkeys](https://github.com/jirutka/efi-mkkeys).
 
@@ -63,11 +65,3 @@ Notes:
 * `cp <var>.vardata /sys/...` is equivalent to `efi-updatevar -f <var>.auth <var>`.
 * The destination filenames in the efivars filesystem may look random, but they are always the same.
 * The order of the `cp` commands matters. Writing to `/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c` ends the setup mode.
-
-### cert-to-efi-sig-list
-
-```sh
-make cert-to-efi-sig-list
-./cert-to-efi-sig-list -g a25e0ad4-9c64-11f0-8e7e-0800279b31a2 fedora.crt fedora.esl
-md5sum fedora.esl | sed -E 's/^e868d249.*/OK/'
-```
