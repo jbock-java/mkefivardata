@@ -35,9 +35,50 @@ sudo dnf install gnu-efi-devel
 sudo make install
 ```
 
-### Create and enroll your keys (FIXME)
+### Create and enroll your keys
 
-Copy the `.vardata` files to the efivars filesystem (requires administrator privilege):
+Keys and certificates can be created with the `openssl x509` command; see [Controlling Secure Boot](https://www.rodsbooks.com/efi-bootloaders/controlling-sb.html).
+Let's assume you have created three pairs consisting of 6 files:
+
+```
+PK.key PK.crt
+KEK.key KEK.crt
+myOrg.key myOrg.crt
+```
+
+We could have called the last pair `db.key` and `db.crt`. But let's assume for now that we also want to enroll the "fedora secure boot signing certificate" along with `myOrg.crt`.
+
+The fedora certificate comes in the form of an additional file `fedora.crt`. Note that we do not have the corresponding private key.
+
+Choose a guid and convert all your `crt` files to "efi-siglist" format:
+
+```sh
+guid=4212023e-a290-11f0-bd3b-e446b04ad651
+for name in PK KEK myOrg fedora; do
+    cert-to-efi-sig-list -g $guid $name.crt $name.esl
+done
+```
+
+The `esl` files can be concatenated. Combine `myOrg.esl` and `fedora.esl` to create `db.esl`:
+
+```sh
+cat myOrg.esl fedora.esl > db.esl
+```
+
+Now sign your `esl` files, thus creating three files `PK.vardata`, `KEK.vardata` and `db.vardata`:
+
+```sh
+timestamp="2025-10-06 12:00:01"
+# PK signs PK
+sign-efi-siglist -g $guid -t "$timestamp" -k PK.key -c PK.crt PK PK.esl PK.vardata
+# PK signs KEK
+sign-efi-siglist -g $guid -t "$timestamp" -k PK.key -c PK.crt KEK KEK.esl KEK.vardata
+# KEK signs db
+sign-efi-siglist -g $guid -t "$timestamp" -k KEK.key -c KEK.crt db db.esl db.vardata
+```
+
+The `vardata` files do not contain private key data, so they can be shared.
+Boot the target system in "Secure Boot Setup Mode" and enroll your keys:
 
 ```sh
 chattr -i /sys/firmware/efi/efivars/*
