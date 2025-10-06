@@ -29,10 +29,10 @@ sudo apt-get install gnu-efi
 sudo dnf install gnu-efi-devel
 ```
 
-### Build the binaries
+### Installation
 
 ```sh
-make cert-to-efi-sig-list sign-efi-siglist
+sudo make install
 ```
 
 ### Create and enroll your keys (FIXME)

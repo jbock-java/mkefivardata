@@ -26,5 +26,5 @@ sigtest: sign-efi-siglist
 clean:
 	@rm -f mkefivardata cert-to-efi-sig-list sign-efi-siglist
 
-install: sign-efi-siglist
-	install -m 755 sign-efi-siglist $(DESTDIR)/usr/bin
+install: cert-to-efi-sig-list sign-efi-siglist
+	install -m 755 $^ $(DESTDIR)/usr/local/bin
