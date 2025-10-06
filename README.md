@@ -1,11 +1,11 @@
-# sign-esl
+# sign-efi-siglist
 
 ```
 This tool is derived from efitools' "sign-efi-sig-list".
 The name was changed to avoid confusion, because the output format is different:
 "sign-efi-sig-list" creates output in "auth" format,
 which is suitable for UEFI's standard "SetVariable" call.
-"sign-esl" instead outputs the native format of the Linux kernel's "efivarfs" filesystem,
+"sign-efi-siglist" instead outputs the native format of the Linux kernel's "efivarfs" filesystem,
 which is called "vardata" here.
 This can be more convenient, because a "vardata" file can be copied directly
 to the efivarfs filesystem.
@@ -32,22 +32,10 @@ sudo dnf install gnu-efi-devel
 ### Build the binaries
 
 ```sh
-make cert-to-efi-sig-list sign-esl
+make cert-to-efi-sig-list sign-efi-siglist
 ```
 
 ### Create and enroll your keys (FIXME)
-
-Signed secureboot keys can be generated with [efi-mkkeys](https://github.com/jirutka/efi-mkkeys).
-
-Convert the signed secureboot keys (`*.auth`) to `*.vardata` files:
-
-```sh
-mkefivardata db.auth db.vardata
-mkefivardata KEK.auth KEK.vardata
-mkefivardata PK.auth PK.vardata
-```
-
-The remaining steps will only work in [setup mode](https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot).
 
 Copy the `.vardata` files to the efivars filesystem (requires administrator privilege):
 
@@ -57,11 +45,3 @@ cp db.vardata /sys/firmware/efi/efivars/db-d719b2cb-3d3a-4596-a3bc-dad00e67656f
 cp KEK.vardata /sys/firmware/efi/efivars/KEK-8be4df61-93ca-11d2-aa0d-00e098032b8c
 cp PK.vardata /sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c
 ```
-
-Congratulations, the secureboot keys are now enrolled.
-
-Notes:
-
-* `cp <var>.vardata /sys/...` is equivalent to `efi-updatevar -f <var>.auth <var>`.
-* The destination filenames in the efivars filesystem may look random, but they are always the same.
-* The order of the `cp` commands matters. Writing to `/sys/firmware/efi/efivars/PK-8be4df61-93ca-11d2-aa0d-00e098032b8c` ends the setup mode.

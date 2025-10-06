@@ -23,7 +23,7 @@ static const uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
 
 void usage()
 {
-	printf("Usage: sign-esl [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <x.esl> <x.vardata>\n");
+	printf("Usage: sign-efi-siglist [-g <guid>] [-t <timestamp>] [-c <crt_file>] [-k <key_file>] <var> <x.esl> <x.vardata>\n");
 }
 
 void help()
@@ -36,7 +36,7 @@ void help()
 	       "The name was changed to avoid confusion, because the output format is different:\n"
 	       "\"sign-efi-sig-list\" creates output in \"auth\" format,\n"
 	       "which is suitable for UEFI's standard \"SetVariable\" call.\n"
-	       "\"sign-esl\" instead outputs the native format of the Linux kernel's \"efivarfs\" filesystem,\n"
+	       "\"sign-efi-siglist\" instead outputs the native format of the Linux kernel's \"efivarfs\" filesystem,\n"
 	       "which is called \"vardata\" here.\n"
 	       "This can be more convenient, because a \"vardata\" file can be copied directly\n"
 	       "to the efivarfs filesystem.\n"
