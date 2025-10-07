@@ -4,9 +4,34 @@
 
 #include <openssl_sign.h>
 
-int
-sign_efi_var_ssl(char *payload, int payload_size, EVP_PKEY *pkey, X509 *cert,
-		 unsigned char **sig, int *sigsize)
+EVP_PKEY * read_private_key(char *keyfile)
+{
+	BIO *key = BIO_new_file(keyfile, "r");
+	EVP_PKEY *pkey;
+
+	if (!key) {
+		ERR_print_errors_fp(stdout);
+		fprintf(stderr, "error reading private key file %s\n", keyfile);
+		return NULL;
+	}
+	pkey = PEM_read_bio_PrivateKey(key, NULL, NULL, NULL);
+	BIO_free(key);
+
+	if (!pkey) {
+		ERR_print_errors_fp(stdout);
+		fprintf(stderr, "error processing private key file %s\n", keyfile);
+		return NULL;
+	}
+	return pkey;
+}
+
+int sign_efi_var_ssl(
+	char *payload,
+	int payload_size,
+	EVP_PKEY *pkey,
+	X509 *cert,
+	unsigned char **sig,
+	int *sigsize)
 {
 	BIO *bio_data = BIO_new_mem_buf(payload, payload_size);
 	PKCS7 *p7;
@@ -24,12 +49,14 @@ sign_efi_var_ssl(char *payload, int payload_size, EVP_PKEY *pkey, X509 *cert,
 	return 0;
 }
 
-int
-sign_efi_var(char *payload, int payload_size, char *keyfile, char *certfile,
-	     unsigned char **sig, int *sigsize)
+int sign_efi_var(
+	char *payload,
+	int payload_size,
+	char *keyfile,
+	char *certfile,
+	unsigned char **sig,
+	int *sigsize)
 {
-	int ret;
-
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_digests();
 	OpenSSL_add_all_ciphers();
@@ -59,7 +86,7 @@ sign_efi_var(char *payload, int payload_size, char *keyfile, char *certfile,
 		fprintf(stderr, "error reading private key %s\n", keyfile);
 		return 1;
 	}
-	ret = sign_efi_var_ssl(payload, payload_size, pkey, cert,
+	int ret = sign_efi_var_ssl(payload, payload_size, pkey, cert,
 			       sig, sigsize);
 	EVP_PKEY_free(pkey);
 	X509_free(cert);
@@ -67,30 +94,3 @@ sign_efi_var(char *payload, int payload_size, char *keyfile, char *certfile,
 	return ret;
 }
 
-static EVP_PKEY *
-read_pem_private_key(char *keyfile)
-{
-	BIO *key = BIO_new_file(keyfile, "r");
-	EVP_PKEY *pkey;
-
-	if (!key) {
-		ERR_print_errors_fp(stdout);
-		fprintf(stderr, "error reading private key file %s\n", keyfile);
-		return NULL;
-	}
-	pkey = PEM_read_bio_PrivateKey(key, NULL, NULL, NULL);
-	BIO_free(key);
-
-	if (!pkey) {
-		ERR_print_errors_fp(stdout);
-		fprintf(stderr, "error processing private key file %s\n", keyfile);
-		return NULL;
-	}
-	return pkey;
-}
-
-EVP_PKEY *
-read_private_key(char *keyfile)
-{
-	return read_pem_private_key(keyfile);
-}

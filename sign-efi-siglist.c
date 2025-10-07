@@ -10,7 +10,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <variables.h>
+#include <efiauthenticated.h>
 #include <guid.h>
 #include <openssl_sign.h>
 
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 		*var_str, *timestampstr = NULL;
 	unsigned char *sigbuf;
 	int varlen, sigsize;
-	EFI_GUID vendor_guid;
+	EFI_GUID owner;
 	struct stat st;
 	EFI_TIME timestamp;
 	memset(&timestamp, 0, sizeof(timestamp));
@@ -69,7 +69,10 @@ int main(int argc, char *argv[])
 			help();
 			exit(0);
 		} else if (strcmp("-g", argv[1]) == 0) {
-			str_to_guid(argv[2], &vendor_guid);
+			if (str_to_guid(argv[2], &owner)) {
+				printf("ERROR: invalid guid\n");
+				exit(1);
+			}
 			argv += 2;
 			argc -= 2;
 		} else if (strcmp("-t", argv[1]) == 0) {
@@ -100,9 +103,9 @@ int main(int argc, char *argv[])
 
 	/* Specific GUIDs for special variables */
 	if (strcmp(var_str, "PK") == 0 || strcmp(var_str, "KEK") == 0) {
-		vendor_guid = (EFI_GUID) EFI_GLOBAL_VARIABLE;
+		owner = (EFI_GUID) EFI_GLOBAL_VARIABLE;
 	} else if (strcmp(var_str, "db") == 0 || strcmp(var_str, "dbx") == 0) {
-		vendor_guid = (EFI_GUID) { 0xd719b2cb, 0x3d3a, 0x4596, { 0xa3, 0xbc, 0xda, 0xd0, 0xe, 0x67, 0x65, 0x6f }};
+		owner = (EFI_GUID) { 0xd719b2cb, 0x3d3a, 0x4596, { 0xa3, 0xbc, 0xda, 0xd0, 0xe, 0x67, 0x65, 0x6f }};
 	}
 
 	time_t t;
@@ -156,7 +159,7 @@ int main(int argc, char *argv[])
 	int signbuflen = signbuf_header_len + st.st_size;
 	char *signbuf = malloc(signbuflen);
 	memcpy(signbuf, var, varlen);
-	memcpy(signbuf + varlen, &vendor_guid, sizeof(EFI_GUID));
+	memcpy(signbuf + varlen, &owner, sizeof(EFI_GUID));
 	memcpy(signbuf + varlen + sizeof(EFI_GUID), &attributes, sizeof(uint32_t));
 	memcpy(signbuf + varlen + sizeof(EFI_GUID) + sizeof(uint32_t), &timestamp, sizeof(EFI_TIME));
 	read(fdefifile, signbuf + signbuf_header_len, st.st_size);

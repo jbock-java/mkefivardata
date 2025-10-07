@@ -3,7 +3,7 @@ CFLAGS += -Iinclude
 CFLAGS += -Wall
 CFLAGS += -pedantic-errors
 CFLAGS += -Werror=vla
-CFLAGS += -D_XOPEN_SOURCE=700
+CFLAGS += -D_GNU_SOURCE
 
 TEST_OWNER = a25e0ad4-9c64-11f0-8e7e-0800279b31a2
 
@@ -25,6 +25,7 @@ sigtest: sign-efi-siglist
 
 clean:
 	@rm -f mkefivardata cert-to-efi-sig-list sign-efi-siglist
+	@rm -f *.esl *.vardata
 
 install: cert-to-efi-sig-list sign-efi-siglist
 	install -m 755 $^ $(DESTDIR)/usr/local/bin

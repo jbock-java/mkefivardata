@@ -10,7 +10,6 @@
 
 #include <guid.h>
 #include <efiauthenticated.h>
-#include <version.h>
 
 static void usage(const char *progname)
 {
@@ -38,14 +37,14 @@ int main(int argc, char *argv[])
 	memset(&owner, 0, sizeof(EFI_GUID));
 
 	while (argc > 1) {
-		if (strcmp("--version", argv[1]) == 0) {
-			version(progname);
-			exit(0);
-		} else if (strcmp("--help", argv[1]) == 0) {
+		if (strcmp("--help", argv[1]) == 0) {
 			help(progname);
 			exit(0);
 		} else if (strcmp("-g", argv[1]) == 0) {
-			str_to_guid(argv[2], &owner);
+			if (str_to_guid(argv[2], &owner)) {
+				printf("invalid guid\n");
+				exit(1);
+			}
 			argv += 2;
 			argc -= 2;
 		} else {
