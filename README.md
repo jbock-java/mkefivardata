@@ -5,11 +5,12 @@ This tool is derived from efitools' "sign-efi-sig-list".
 The name was changed to avoid confusion, because the output format is different:
 "sign-efi-sig-list" creates output in "auth" format,
 which is suitable for UEFI's standard "SetVariable" call.
-"sign-efi-siglist" instead outputs the native format of the Linux kernel's "efivarfs" filesystem,
-which is called "vardata" here.
-This can be more convenient, because a "vardata" file can be copied directly
-to the efivarfs filesystem.
-There is no need for an additional tool like "efi-updatevar".
+By contrast, "sign-efi-siglist" outputs the native format of the Linux
+"efivarfs" filesystem (with four extra bytes of "attributes").
+On a Linux system, this can be more convenient, because such a "vardata" file
+can be copied directly to the efivarfs filesystem.
+This means that secureboot keys can be enrolled
+without an additional tool like "efi-updatevar".
 ```
 
 [efitools upstream](https://git.kernel.org/pub/scm/linux/kernel/git/jejb/efitools.git)

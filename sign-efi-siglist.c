@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 	EFI_TIME timestamp;
 	memset(&timestamp, 0, sizeof(timestamp));
 
-	while (argc) {
+	while (argc > 1) {
 		if (strcmp("--help", argv[1]) == 0) {
 			help();
 			exit(0);
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 	if (strcmp(var_str, "PK") == 0 || strcmp(var_str, "KEK") == 0) {
 		vendor_guid = (EFI_GUID) EFI_GLOBAL_VARIABLE;
 	} else if (strcmp(var_str, "db") == 0 || strcmp(var_str, "dbx") == 0) {
-		vendor_guid = (EFI_GUID) { 0xd719b2cb, 0x3d3a, 0x4596, {0xa3, 0xbc, 0xda, 0xd0, 0xe, 0x67, 0x65, 0x6f }};
+		vendor_guid = (EFI_GUID) { 0xd719b2cb, 0x3d3a, 0x4596, { 0xa3, 0xbc, 0xda, 0xd0, 0xe, 0x67, 0x65, 0x6f }};
 	}
 
 	time_t t;
